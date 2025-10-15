@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><sh:StandardBusinessDocument xmlns:sh="http://www.unece.org/cefact/namespaces/StandardBusinessDocumentHeader"><sh:StandardBusinessDocumentHeader><sh:HeaderVersion>1.0</sh:HeaderVersion><sh:Sender><sh:Identifier Authority="iso6523-actorid-upis">0208:0844125969</sh:Identifier></sh:Sender><sh:Receiver><sh:Identifier Authority="iso6523-actorid-upis">0208:0797948229</sh:Identifier></sh:Receiver><sh:DocumentIdentification><sh:Standard>urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2</sh:Standard><sh:TypeVersion>2.1</sh:TypeVersion><sh:InstanceIdentifier>b28570dd-da15-47d6-aa21-779776010378</sh:InstanceIdentifier><sh:Type>ApplicationResponse</sh:Type><sh:CreationDateAndTime>2025-06-02T07:31:05.107Z</sh:CreationDateAndTime></sh:DocumentIdentification><sh:BusinessScope><sh:Scope><sh:Type>DOCUMENTID</sh:Type><sh:InstanceIdentifier>urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2::ApplicationResponse##urn:fdc:peppol.eu:poacc:trns:invoice_response:3::2.1</sh:InstanceIdentifier><sh:Identifier>busdox-docid-qns</sh:Identifier></sh:Scope><sh:Scope><sh:Type>PROCESSID</sh:Type><sh:InstanceIdentifier>urn:fdc:peppol.eu:poacc:bis:invoice_response:3</sh:InstanceIdentifier><sh:Identifier>cenbii-procid-ubl</sh:Identifier></sh:Scope><sh:Scope><sh:Type>COUNTRY_C1</sh:Type><sh:InstanceIdentifier>BE</sh:InstanceIdentifier></sh:Scope></sh:BusinessScope></sh:StandardBusinessDocumentHeader><tns:ApplicationResponse xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:tns="urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2">
+  <cbc:CustomizationID>urn:fdc:peppol.eu:poacc:trns:invoice_response:3</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:poacc:bis:invoice_response:3</cbc:ProfileID>
+  <cbc:ID>2e624135-404a-4e91-a7ca-0f744e41ccea</cbc:ID>
+  <cbc:IssueDate>2025-06-02</cbc:IssueDate>
+  <cac:SenderParty>
+    <cbc:EndpointID schemeID="0208">0844125969</cbc:EndpointID>
+    <cac:PartyIdentification>
+      <cbc:ID schemeID="0208">0844125969</cbc:ID>
+    </cac:PartyIdentification>
+    <cac:PartyLegalEntity>
+      <cbc:RegistrationName>Kumulus bvba</cbc:RegistrationName>
+    </cac:PartyLegalEntity>
+  </cac:SenderParty>
+  <cac:ReceiverParty>
+    <cbc:EndpointID schemeID="0208">0797948229</cbc:EndpointID>
+    <cac:PartyIdentification>
+      <cbc:ID schemeID="0208">0797948229</cbc:ID>
+    </cac:PartyIdentification>
+    <cac:PartyLegalEntity>
+      <cbc:RegistrationName>Octarion</cbc:RegistrationName>
+    </cac:PartyLegalEntity>
+  </cac:ReceiverParty>
+  <cac:DocumentResponse>
+    <cac:Response>
+      <cbc:ResponseCode listID="UNCL4343OpSubset">AB</cbc:ResponseCode>
+    </cac:Response>
+    <cac:DocumentReference>
+      <cbc:ID>V01/F2025173</cbc:ID>
+      <cbc:DocumentTypeCode listID="UNCL1001">380</cbc:DocumentTypeCode>
+    </cac:DocumentReference>
+  </cac:DocumentResponse>
+</tns:ApplicationResponse></sh:StandardBusinessDocument>

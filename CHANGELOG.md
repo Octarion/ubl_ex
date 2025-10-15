@@ -7,20 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-10-15
+
 ### Added
-- Initial release
-- UBL document generation for Invoices and Credit Notes
+- UBL document generation for Invoices, Credit Notes, and Application Responses
 - Peppol BIS Billing 3.0 compliance
-- Namespace-agnostic XML parser
+- SBDH (Standard Business Document Header) generation for Peppol network transmission
+- Full round-trip support for all document types (parse → generate → parse)
+- Automatic SBDH parsing and unwrapping
+- Attachment support for invoices and credit notes
+- Auto-detection of document types (Invoice, CreditNote, ApplicationResponse)
+- Namespace-agnostic XML parser with configurable schemas
 - Schema registry for multiple XML formats
-- Behaviour-based extensibility
-- SEPA credit transfer payment means (code 58)
-- Proper OrderReference handling (NA for missing references)
-
-## [0.1.0] - 2025-01-10
-
-### Added
-- Initial package structure
-- Parser infrastructure
-- Generator infrastructure
-- Behaviour definitions
+- Customer endpoint_id derivation from VAT for SBDH when not provided

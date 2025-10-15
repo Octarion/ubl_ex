@@ -38,7 +38,7 @@ defmodule UblEx.MixProject do
   defp description do
     """
     UBL (Universal Business Language) document generation and parsing for Elixir.
-    Supports Peppol BIS Billing 3.0 compliant invoices and credit notes.
+    Supports Peppol BIS Billing 3.0 compliant invoices, credit notes, and application responses with SBDH support.
     """
   end
 
@@ -59,7 +59,21 @@ defmodule UblEx.MixProject do
       main: "UblEx",
       source_ref: "v#{@version}",
       source_url: @source_url,
-      extras: ["README.md", "CHANGELOG.md"]
+      extras: ["README.md", "CHANGELOG.md", "LICENSE"],
+      groups_for_modules: [
+        Generators: [
+          UblEx.Generator.Invoice,
+          UblEx.Generator.CreditNote,
+          UblEx.Generator.ApplicationResponse,
+          UblEx.Generator.SBDH,
+          UblEx.Generator.Helpers
+        ],
+        Parsers: [
+          UblEx.Parser.Parser,
+          UblEx.Parser.SchemaRegistry,
+          UblEx.Parser.Importer
+        ]
+      ]
     ]
   end
 end
