@@ -27,7 +27,7 @@ defmodule UblEx.MixProject do
 
   defp deps do
     [
-      {:sweet_xml, "~> 0.7"},
+      {:saxy, "~> 1.6"},
       {:decimal, "~> 2.0"},
       {:phoenix_html, "~> 4.0"},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},

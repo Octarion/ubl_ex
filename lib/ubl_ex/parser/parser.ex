@@ -4,7 +4,8 @@ defmodule UblEx.Parser.Parser do
   This module provides a namespace-agnostic way to parse XML documents.
   """
 
-  import SweetXml
+  use UblEx.Parser.SweetXmlCompat
+  alias UblEx.Parser.SaxyDOM
 
   @type xpath_spec :: %{
           required(:path) => charlist(),
@@ -94,8 +95,7 @@ defmodule UblEx.Parser.Parser do
   defp extract_inner_document(xml_content, doc_type) do
     xml_content
     |> xpath(~x"//*[local-name()='#{doc_type}']"e)
-    |> :xmerl.export_simple_element(:xmerl_xml)
-    |> to_string()
+    |> SaxyDOM.export_element()
   end
 
   @doc """

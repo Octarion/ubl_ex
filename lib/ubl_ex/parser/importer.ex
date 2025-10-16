@@ -44,7 +44,7 @@ defmodule UblEx.Parser.Importer do
   end
 
   defp extract_party_data(xml_content, %{base_path: base_path, fields: fields}) do
-    import SweetXml
+    use UblEx.Parser.SweetXmlCompat
 
     try do
       party_data =

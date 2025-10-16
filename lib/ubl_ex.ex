@@ -93,13 +93,7 @@ defmodule UblEx do
   """
   @spec parse(String.t()) :: {:ok, map()} | {:error, String.t()}
   def parse(xml_content) do
-    case Parser.SchemaRegistry.auto_detect_schema(xml_content) do
-      {:ok, schema_id} ->
-        parse_xml(xml_content, schema_id)
-
-      {:error, :no_matching_schema} ->
-        {:error, "No compatible schema found for this XML document"}
-    end
+    Parser.SimpleParser.parse(xml_content)
   end
 
   @doc """
@@ -184,11 +178,8 @@ defmodule UblEx do
       end
   """
   @spec parse_xml(String.t(), atom()) :: {:ok, map()} | {:error, String.t()}
-  def parse_xml(xml_content, schema_id) do
-    case Parser.Importer.validate(xml_content, schema_id) do
-      {:ok, {_doc_type, parsed_data}} -> {:ok, parsed_data}
-      error -> error
-    end
+  def parse_xml(xml_content, _schema_id) do
+    Parser.SimpleParser.parse(xml_content)
   end
 
   @doc """

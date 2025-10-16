@@ -6,7 +6,7 @@ defmodule UblEx.Parser.SchemaRegistry do
   meaning the parser output matches the generator input format exactly.
   """
 
-  import SweetXml
+  use UblEx.Parser.SweetXmlCompat
   alias UblEx.Parser.Parser
 
   @type schema_id :: atom()
