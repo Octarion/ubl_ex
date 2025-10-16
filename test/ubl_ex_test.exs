@@ -1,5 +1,6 @@
 defmodule UblExTest do
   use ExUnit.Case
+  import ExUnit.CaptureLog
   doctest UblEx
 
   @fixtures_path Path.join(__DIR__, "fixtures/xml")
@@ -30,9 +31,9 @@ defmodule UblExTest do
     end
 
     test "crashes on invalid XML" do
-      # The underlying XML parser (xmerl) raises on invalid XML
-      # This is expected behavior
-      assert catch_exit(UblEx.parse_xml("not xml", :ubl_peppol))
+      capture_log(fn ->
+        assert catch_exit(UblEx.parse_xml("not xml", :ubl_peppol))
+      end)
     end
   end
 
