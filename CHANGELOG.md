@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-10-17
+
+### Added
+- Configurable customer endpoint scheme via `customer.scheme` field (defaults to "0208")
+- Explicit customer endpoint ID via `customer.endpoint_id` field (defaults to VAT number for backward compatibility)
+- Support for different Peppol identifier schemes (e.g., "9925" for organization numbers, country-specific schemes)
+
 ## [0.2.0] - 2025-10-17
 
 ### Changed
