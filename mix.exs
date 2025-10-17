@@ -1,7 +1,7 @@
 defmodule UblEx.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @source_url "https://github.com/Octarion/ubl_ex"
 
   def project do
@@ -27,7 +27,7 @@ defmodule UblEx.MixProject do
 
   defp deps do
     [
-      {:sweet_xml, "~> 0.7"},
+      {:saxy, "~> 1.6"},
       {:decimal, "~> 2.0"},
       {:phoenix_html, "~> 4.0"},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
@@ -69,9 +69,8 @@ defmodule UblEx.MixProject do
           UblEx.Generator.Helpers
         ],
         Parsers: [
-          UblEx.Parser.Parser,
-          UblEx.Parser.SchemaRegistry,
-          UblEx.Parser.Importer
+          UblEx.Parser.SimpleParser,
+          UblEx.Parser.UblHandler
         ]
       ]
     ]

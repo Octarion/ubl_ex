@@ -5,7 +5,7 @@ defmodule UblEx do
   This library provides:
   - Peppol BIS Billing 3.0 compliant invoice, credit note, and application response generation
   - SBDH (Standard Business Document Header) support for Peppol network transmission
-  - Namespace-agnostic XML parsing with configurable schemas
+  - Fast SAX-based XML parsing using Saxy (1.4-4x faster than xmerl)
   - Full round-trip support (parse → generate → parse without data loss)
 
   ## Quick Start
@@ -57,9 +57,6 @@ defmodule UblEx do
 
       {:ok, parsed} = UblEx.parse(xml_content)
 
-      # Or with specific schema
-      {:ok, parsed} = UblEx.parse_xml(xml_content, :ubl_peppol)
-
       # Document type is in the data
       case parsed.type do
         :invoice -> handle_invoice(parsed)
@@ -71,7 +68,7 @@ defmodule UblEx do
 
   Parse documents and handle them in your own code:
 
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
       MyApp.save_invoice(parsed)
       MyApp.send_notification(parsed)
   """
@@ -93,13 +90,7 @@ defmodule UblEx do
   """
   @spec parse(String.t()) :: {:ok, map()} | {:error, String.t()}
   def parse(xml_content) do
-    case Parser.SchemaRegistry.auto_detect_schema(xml_content) do
-      {:ok, schema_id} ->
-        parse_xml(xml_content, schema_id)
-
-      {:error, :no_matching_schema} ->
-        {:error, "No compatible schema found for this XML document"}
-    end
+    Parser.SimpleParser.parse(xml_content)
   end
 
   @doc """
@@ -113,7 +104,7 @@ defmodule UblEx do
   ## Examples
 
       # Parse and regenerate
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
       regenerated_xml = UblEx.generate(parsed)
 
       # Generate invoice
@@ -165,66 +156,4 @@ defmodule UblEx do
       ubl_xml -> SBDH.wrap(ubl_xml, document_data)
     end
   end
-
-  @doc """
-  Parse XML with a specific schema.
-
-  Returns `{:ok, parsed_data}` or `{:error, reason}`.
-
-  The document type is available in `parsed_data.type` (`:invoice`, `:credit`, or `:application_response`).
-
-  ## Example
-
-      {:ok, parsed} = UblEx.parse_xml(xml_content, :ubl_peppol)
-
-      case parsed.type do
-        :invoice -> MyApp.Invoices.create(parsed)
-        :credit -> MyApp.CreditNotes.create(parsed)
-        :application_response -> MyApp.Responses.process(parsed)
-      end
-  """
-  @spec parse_xml(String.t(), atom()) :: {:ok, map()} | {:error, String.t()}
-  def parse_xml(xml_content, schema_id) do
-    case Parser.Importer.validate(xml_content, schema_id) do
-      {:ok, {_doc_type, parsed_data}} -> {:ok, parsed_data}
-      error -> error
-    end
-  end
-
-  @doc """
-  Validate XML against schema without parsing.
-
-  Returns `{:ok, {doc_type, parsed_data}}` or `{:error, reason}`.
-  """
-  defdelegate validate_xml(xml_content, schema_id),
-    to: Parser.Importer,
-    as: :validate
-
-  @doc """
-  Register a custom schema configuration.
-
-  ## Example
-
-      UblEx.register_schema(:my_custom_schema, %{
-        root_element: "CustomInvoice",
-        namespaces: %{
-          default: "urn:custom:invoice"
-        },
-        document_types: %{
-          "CustomInvoice" => %{
-            # ... field mappings
-          }
-        }
-      })
-  """
-  defdelegate register_schema(schema_id, config),
-    to: Parser.SchemaRegistry
-
-  @doc """
-  List all available schemas.
-
-  Returns a list of schema IDs that can be used with `parse_xml/3`.
-  """
-  defdelegate list_schemas(),
-    to: Parser.SchemaRegistry
 end

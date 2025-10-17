@@ -4,11 +4,11 @@ defmodule UblExTest do
 
   @fixtures_path Path.join(__DIR__, "fixtures/xml")
 
-  describe "parse_xml/2" do
+  describe "parse/1" do
     test "parses UBL invoice successfully" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
 
-      assert {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      assert {:ok, parsed} = UblEx.parse(xml)
       assert parsed.type == :invoice
       assert is_binary(parsed.number)
       assert %Date{} = parsed.date
@@ -20,7 +20,7 @@ defmodule UblExTest do
     test "parses UBL credit note successfully" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
 
-      assert {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      assert {:ok, parsed} = UblEx.parse(xml)
       assert parsed.type == :credit
       assert is_binary(parsed.number)
       assert %Date{} = parsed.date
@@ -29,29 +29,11 @@ defmodule UblExTest do
       assert is_list(parsed.details)
     end
 
-    test "crashes on invalid XML" do
-      # The underlying XML parser (xmerl) raises on invalid XML
-      # This is expected behavior
-      assert catch_exit(UblEx.parse_xml("not xml", :ubl_peppol))
-    end
-  end
-
-  describe "parse/1" do
-    test "auto-detects UBL invoice" do
-      xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
-
-      assert {:ok, parsed} = UblEx.parse(xml)
-      assert parsed.type == :invoice
+    test "returns error on invalid XML" do
+      assert {:error, _reason} = UblEx.parse("not xml")
     end
 
-    test "auto-detects UBL credit note" do
-      xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
-
-      assert {:ok, parsed} = UblEx.parse(xml)
-      assert parsed.type == :credit
-    end
-
-    test "auto-detects application response" do
+    test "parses application response" do
       xml = File.read!(Path.join(@fixtures_path, "sbdh_application_response.xml"))
 
       assert {:ok, parsed} = UblEx.parse(xml)
@@ -61,17 +43,17 @@ defmodule UblExTest do
     end
   end
 
-  describe "generate/2" do
+  describe "generate/1" do
     test "generates invoice from parsed data" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
 
       assert is_binary(UblEx.generate(parsed))
     end
 
     test "generates credit note from parsed data" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
 
       assert is_binary(UblEx.generate(parsed))
     end
@@ -97,7 +79,7 @@ defmodule UblExTest do
   describe "attachments" do
     test "parses attachments from credit note" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
 
       assert is_list(parsed.attachments)
       assert length(parsed.attachments) > 0
@@ -161,7 +143,7 @@ defmodule UblExTest do
 
     test "attachment round-trip preserves data" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
-      {:ok, parsed1} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed1} = UblEx.parse(xml)
 
       # Should have attachments
       assert length(parsed1.attachments) > 0
@@ -169,7 +151,7 @@ defmodule UblExTest do
 
       # Generate and reparse
       generated_xml = UblEx.generate(parsed1)
-      {:ok, parsed2} = UblEx.parse_xml(generated_xml, :ubl_peppol)
+      {:ok, parsed2} = UblEx.parse(generated_xml)
 
       # Verify attachment preserved
       assert length(parsed2.attachments) == length(parsed1.attachments)
@@ -351,13 +333,13 @@ defmodule UblExTest do
       original_xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
 
       # First parse
-      {:ok, parsed1} = UblEx.parse_xml(original_xml, :ubl_peppol)
+      {:ok, parsed1} = UblEx.parse(original_xml)
 
       # Generate
       generated_xml = UblEx.generate(parsed1)
 
       # Second parse
-      {:ok, parsed2} = UblEx.parse_xml(generated_xml, :ubl_peppol)
+      {:ok, parsed2} = UblEx.parse(generated_xml)
 
       # Verify key fields match
       assert parsed1.type == parsed2.type
@@ -374,13 +356,13 @@ defmodule UblExTest do
       original_xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
 
       # First parse
-      {:ok, parsed1} = UblEx.parse_xml(original_xml, :ubl_peppol)
+      {:ok, parsed1} = UblEx.parse(original_xml)
 
       # Generate
       generated_xml = UblEx.generate(parsed1)
 
       # Second parse
-      {:ok, parsed2} = UblEx.parse_xml(generated_xml, :ubl_peppol)
+      {:ok, parsed2} = UblEx.parse(generated_xml)
 
       # Verify key fields match
       assert parsed1.type == parsed2.type
