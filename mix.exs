@@ -69,9 +69,8 @@ defmodule UblEx.MixProject do
           UblEx.Generator.Helpers
         ],
         Parsers: [
-          UblEx.Parser.Parser,
-          UblEx.Parser.SchemaRegistry,
-          UblEx.Parser.Importer
+          UblEx.Parser.SimpleParser,
+          UblEx.Parser.UblHandler
         ]
       ]
     ]

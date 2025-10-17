@@ -181,41 +181,4 @@ defmodule UblEx do
   def parse_xml(xml_content, _schema_id) do
     Parser.SimpleParser.parse(xml_content)
   end
-
-  @doc """
-  Validate XML against schema without parsing.
-
-  Returns `{:ok, {doc_type, parsed_data}}` or `{:error, reason}`.
-  """
-  defdelegate validate_xml(xml_content, schema_id),
-    to: Parser.Importer,
-    as: :validate
-
-  @doc """
-  Register a custom schema configuration.
-
-  ## Example
-
-      UblEx.register_schema(:my_custom_schema, %{
-        root_element: "CustomInvoice",
-        namespaces: %{
-          default: "urn:custom:invoice"
-        },
-        document_types: %{
-          "CustomInvoice" => %{
-            # ... field mappings
-          }
-        }
-      })
-  """
-  defdelegate register_schema(schema_id, config),
-    to: Parser.SchemaRegistry
-
-  @doc """
-  List all available schemas.
-
-  Returns a list of schema IDs that can be used with `parse_xml/3`.
-  """
-  defdelegate list_schemas(),
-    to: Parser.SchemaRegistry
 end
