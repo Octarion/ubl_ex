@@ -5,7 +5,7 @@ defmodule UblEx do
   This library provides:
   - Peppol BIS Billing 3.0 compliant invoice, credit note, and application response generation
   - SBDH (Standard Business Document Header) support for Peppol network transmission
-  - Namespace-agnostic XML parsing with configurable schemas
+  - Fast SAX-based XML parsing using Saxy (1.4-4x faster than xmerl)
   - Full round-trip support (parse → generate → parse without data loss)
 
   ## Quick Start
@@ -57,9 +57,6 @@ defmodule UblEx do
 
       {:ok, parsed} = UblEx.parse(xml_content)
 
-      # Or with specific schema
-      {:ok, parsed} = UblEx.parse_xml(xml_content, :ubl_peppol)
-
       # Document type is in the data
       case parsed.type do
         :invoice -> handle_invoice(parsed)
@@ -71,7 +68,7 @@ defmodule UblEx do
 
   Parse documents and handle them in your own code:
 
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
       MyApp.save_invoice(parsed)
       MyApp.send_notification(parsed)
   """
@@ -107,7 +104,7 @@ defmodule UblEx do
   ## Examples
 
       # Parse and regenerate
-      {:ok, parsed} = UblEx.parse_xml(xml, :ubl_peppol)
+      {:ok, parsed} = UblEx.parse(xml)
       regenerated_xml = UblEx.generate(parsed)
 
       # Generate invoice
@@ -158,27 +155,5 @@ defmodule UblEx do
       {:error, _} = error -> error
       ubl_xml -> SBDH.wrap(ubl_xml, document_data)
     end
-  end
-
-  @doc """
-  Parse XML with a specific schema.
-
-  Returns `{:ok, parsed_data}` or `{:error, reason}`.
-
-  The document type is available in `parsed_data.type` (`:invoice`, `:credit`, or `:application_response`).
-
-  ## Example
-
-      {:ok, parsed} = UblEx.parse_xml(xml_content, :ubl_peppol)
-
-      case parsed.type do
-        :invoice -> MyApp.Invoices.create(parsed)
-        :credit -> MyApp.CreditNotes.create(parsed)
-        :application_response -> MyApp.Responses.process(parsed)
-      end
-  """
-  @spec parse_xml(String.t(), atom()) :: {:ok, map()} | {:error, String.t()}
-  def parse_xml(xml_content, _schema_id) do
-    Parser.SimpleParser.parse(xml_content)
   end
 end
