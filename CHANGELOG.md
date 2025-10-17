@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-10-17
+
+### Fixed
+- Fixed PaymentMeansCode roundtrip preservation - parser now captures original code, generator uses parsed value or intelligently defaults based on IBAN presence
+- Fixed PaymentID roundtrip - parser now extracts PaymentID from PaymentMeans element
+- Fixed IBAN roundtrip - parser now extracts and stores supplier IBAN in supplier data
+- Fixed billing reference ID duplication - removed duplicate "F" prefix in generator template
+- Fixed document ID preservation - parser now keeps full ID (e.g., "V01/F2025158") without stripping prefix, generator uses ID as-is
+
 ## [0.3.0] - 2025-10-17
 
 ### Added

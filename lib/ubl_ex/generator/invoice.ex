@@ -39,7 +39,7 @@ defmodule UblEx.Generator.Invoice do
     <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
     <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
     <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
-    <cbc:ID>V01/#{number}</cbc:ID>
+    <cbc:ID>#{number}</cbc:ID>
     <cbc:IssueDate>#{document_data.date}</cbc:IssueDate>
     <cbc:DueDate>#{document_data.expires}</cbc:DueDate>
     <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
@@ -182,15 +182,20 @@ defmodule UblEx.Generator.Invoice do
 
   defp payment_means(document_data, supplier) do
     payment_id = Map.get(document_data, :payment_id)
-    # IBAN is optional - if not provided, use empty string which is valid for non-SEPA payments
     iban = supplier[:iban] || ""
+
+    payment_means_code =
+      case Map.get(document_data, :payment_means_code) do
+        code when is_binary(code) and code != "" -> code
+        _ -> if iban != "", do: "58", else: "1"
+      end
 
     payment_id_xml =
       if payment_id, do: "<cbc:PaymentID>#{Helpers.escape(payment_id)}</cbc:PaymentID>", else: ""
 
     """
     <cac:PaymentMeans>
-        <cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>
+        <cbc:PaymentMeansCode>#{payment_means_code}</cbc:PaymentMeansCode>
         #{payment_id_xml}
         <cac:PayeeFinancialAccount>
             <cbc:ID>#{Helpers.escape(iban)}</cbc:ID>

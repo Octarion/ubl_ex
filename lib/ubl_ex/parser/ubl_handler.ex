@@ -16,7 +16,8 @@ defmodule UblEx.Parser.UblHandler do
     :current_attachment,
     :line_items,
     :attachments,
-    :billing_refs
+    :billing_refs,
+    :in_payment_means
   ]
 
   def new do
@@ -29,7 +30,8 @@ defmodule UblEx.Parser.UblHandler do
       current_party: nil,
       line_items: [],
       attachments: [],
-      billing_refs: []
+      billing_refs: [],
+      in_payment_means: false
     }
   end
 
@@ -86,6 +88,9 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "AdditionalDocumentReference" ->
           %{new_state | current_attachment: %{}}
 
+        local_name == "PaymentMeans" ->
+          %{new_state | in_payment_means: true}
+
         local_name == "EndpointID" and not is_nil(state.current_party) ->
           {party_type, party_data} = state.current_party
           scheme = get_attribute(attributes, "schemeID")
@@ -112,10 +117,10 @@ defmodule UblEx.Parser.UblHandler do
       cond do
         # Document-level fields
         local_name == "ID" and match?([^local_name, "Invoice" | _], state.path) ->
-          put_result(state, :number, parse_document_id(text))
+          put_result(state, :number, text)
 
         local_name == "ID" and match?([^local_name, "CreditNote" | _], state.path) ->
-          put_result(state, :number, parse_document_id(text))
+          put_result(state, :number, text)
 
         local_name == "ID" and match?([^local_name, "ApplicationResponse" | _], state.path) ->
           put_result(state, :id, text)
@@ -140,7 +145,7 @@ defmodule UblEx.Parser.UblHandler do
 
         local_name == "ID" and
             in_path?(state.path, ["BillingReference", "InvoiceDocumentReference"]) ->
-          %{state | billing_refs: [parse_document_id(text) | state.billing_refs]}
+          %{state | billing_refs: [text | state.billing_refs]}
 
         local_name == "ID" and in_path?(state.path, ["DocumentReference"]) and
             state.document_type == :application_response ->
@@ -149,6 +154,27 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "ID" and in_path?(state.path, ["TaxCategory"]) ->
           reverse_charge = text == "K"
           put_result(state, :reverse_charge, reverse_charge)
+
+        # Payment fields
+        local_name == "PaymentMeansCode" and state.in_payment_means ->
+          put_result(state, :payment_means_code, text)
+
+        local_name == "PaymentID" and state.in_payment_means ->
+          put_result(state, :payment_id, text)
+
+        local_name == "ID" and state.in_payment_means and
+            in_path?(state.path, ["PayeeFinancialAccount"]) ->
+          supplier = state.result[:supplier]
+
+          if supplier do
+            updated_supplier = Map.put(supplier, :iban, text)
+            %{state | result: Map.put(state.result, :supplier, updated_supplier)}
+          else
+            state
+          end
+
+        local_name == "PaymentMeans" ->
+          %{state | in_payment_means: false}
 
         # Party fields
         local_name == "EndpointID" and not is_nil(state.current_party) ->

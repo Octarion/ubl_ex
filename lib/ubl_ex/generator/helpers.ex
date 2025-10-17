@@ -168,7 +168,7 @@ defmodule UblEx.Generator.Helpers do
       """
       <cac:BillingReference>
             <cac:InvoiceDocumentReference>
-            <cbc:ID>V01/F#{number}</cbc:ID>
+            <cbc:ID>#{number}</cbc:ID>
             </cac:InvoiceDocumentReference>\
       </cac:BillingReference>
       """
