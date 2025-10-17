@@ -8,6 +8,7 @@ Parse and generate UBL (Universal Business Language) documents in Elixir with fu
 
 - **Parse** UBL Invoice, CreditNote, and ApplicationResponse XML documents
 - **Generate** Peppol-compliant UBL XML
+- **Validate** against official Peppol BIS Billing 3.0 rules (optional)
 - **Round-trip support** - parse → generate → parse without data loss
 - **Type-safe** - proper Elixir types (Date, Decimal, atoms)
 - **Attachment support** - embed PDF files and other documents
@@ -198,6 +199,78 @@ sbdh_xml = UblEx.generate_with_sbdh(document_data)
 {:ok, parsed} = UblEx.parse(sbdh_xml)
 # Returns the same data structure as parsing unwrapped UBL
 ```
+
+### Validating UBL Documents
+
+UblEx includes an optional validator that validates your generated UBL documents against official Peppol BIS Billing 3.0 rules using the free peppol.helger.com validation service.
+
+**Note:** This feature requires the optional `req` dependency. Add it to your `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:ubl_ex, "~> 0.3.1"},
+    {:req, "~> 0.5.0"}  # Required for validation
+  ]
+end
+```
+
+#### Validating an Invoice
+
+```elixir
+# Generate an invoice
+document_data = %{type: :invoice, number: "F2024001", ...}
+xml = UblEx.generate(document_data)
+
+# Validate against Peppol BIS Billing 3.0
+case UblEx.Validator.validate(xml, :invoice) do
+  {:ok, result} ->
+    IO.puts("✓ Valid Peppol invoice!")
+    if result.warnings != [] do
+      IO.puts("Warnings: #{inspect(result.warnings)}")
+    end
+
+  {:error, %{success: false, errors: errors}} ->
+    IO.puts("✗ Invalid invoice:")
+    Enum.each(errors, fn error -> IO.puts("  - #{error}") end)
+end
+```
+
+#### Validating a Credit Note
+
+```elixir
+xml = UblEx.generate(%{type: :credit, ...})
+UblEx.Validator.validate(xml, :credit)
+```
+
+#### Validation Options
+
+```elixir
+# Custom timeout (default: 30 seconds)
+UblEx.Validator.validate(xml, :invoice, timeout: 60_000)
+
+# Override VESID (validation executor set ID)
+UblEx.Validator.validate(xml, :invoice, vesid: "eu.peppol.bis3:invoice:3.13.0")
+```
+
+#### Understanding Validation Results
+
+The validator returns:
+- **Errors** - Must be fixed for Peppol compliance
+- **Warnings** - Should be fixed for best practices (e.g., country-specific requirements)
+
+```elixir
+{:ok, result} = UblEx.Validator.validate(xml, :invoice)
+result.success  # true/false
+result.errors   # List of error messages
+result.warnings # List of warning messages
+```
+
+**Important Notes:**
+- Validation requires an internet connection (calls external service)
+- The service is provided free of charge without SLA
+- For production use, consider caching validation results
+- SBDH-wrapped documents cannot be validated directly (unwrap first)
 
 ## Document Structure
 

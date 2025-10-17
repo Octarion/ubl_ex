@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-10-17
+
+### Added
+- Optional UBL document validation against Peppol BIS Billing 3.0 rules
+- `UblEx.Validator.validate/3` function for validating invoices and credit notes
+- Integration with free peppol.helger.com validation web service
+- Support for custom validation options (timeout, VESID override)
+- Detailed error and warning reporting from validation service
+- Optional `req` dependency for validation feature (not required for core functionality)
+
 ## [0.3.1] - 2025-10-17
 
 ### Fixed
