@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-10-17
+
+### Changed
+- **BREAKING:** Migrated XML parsing from SweetXML to Saxy for improved performance
+  - Direct SAX event handler eliminates XPath queries and intermediate DOM trees
+  - Significantly faster parsing on large documents
+- **BREAKING:** Removed `parse_xml/2` function - use `parse/1` instead
+- **BREAKING:** Removed schema registry system (`register_schema/2`, `list_schemas/0`, `validate_xml/2`)
+  - Parser now has hardcoded UBL structure knowledge instead of configurable schemas
+- Simplified API to just 3 main functions: `parse/1`, `generate/1`, `generate_with_sbdh/1`
+
+### Removed
+- SweetXML dependency (replaced with Saxy)
+- Old XPath-based parser infrastructure (1,185+ lines of code)
+- Schema configuration system (no longer needed with direct handler)
+
+### Fixed
+- Invalid XML now returns `{:error, reason}` tuple instead of raising/exiting
+- ApplicationResponse documents now properly parse `:id`, `:sender`, and `:receiver` fields
+- SenderParty/ReceiverParty elements handled correctly (with or without nested Party elements)
+- **BREAKING:** Credit notes no longer include `:expires` field (only invoices have DueDate per Peppol BIS Billing 3.0 spec)
+
+### Performance
+- 1,414x faster XML parsing on production-sized documents (890KB invoice with attachment)
+- 90% memory reduction compared to SweetXML in production workloads
+- 1,000 invoices/day: 37 minutes → 1.6 seconds of CPU time
+
 ## [0.1.0] - 2025-10-15
 
 ### Added

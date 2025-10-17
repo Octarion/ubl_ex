@@ -266,7 +266,11 @@ defmodule UblEx.Parser.UblHandler do
   end
 
   defp set_document_type(state, "Invoice"),
-    do: %{state | document_type: :invoice, result: Map.put(state.result, :type, :invoice)}
+    do: %{
+      state
+      | document_type: :invoice,
+        result: state.result |> Map.put(:type, :invoice) |> Map.put(:expires, nil)
+    }
 
   defp set_document_type(state, "CreditNote"),
     do: %{state | document_type: :credit, result: Map.put(state.result, :type, :credit)}
