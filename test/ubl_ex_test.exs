@@ -98,7 +98,6 @@ defmodule UblExTest do
         number: "F001",
         date: ~D[2024-01-15],
         expires: ~D[2024-02-14],
-        reverse_charge: false,
         supplier: %{
           endpoint_id: "0797948229",
           scheme: "0208",
@@ -170,7 +169,6 @@ defmodule UblExTest do
         number: "F001",
         date: ~D[2024-01-15],
         expires: ~D[2024-02-14],
-        reverse_charge: false,
         supplier: %{
           endpoint_id: "0797948229",
           scheme: "0208",
@@ -216,7 +214,6 @@ defmodule UblExTest do
         number: "F001",
         date: ~D[2024-01-15],
         expires: ~D[2024-02-14],
-        reverse_charge: false,
         supplier: %{
           endpoint_id: "0797948229",
           scheme: "0208",
@@ -262,7 +259,6 @@ defmodule UblExTest do
         type: :credit,
         number: "C001",
         date: ~D[2024-01-20],
-        reverse_charge: false,
         billing_references: ["F001"],
         supplier: %{
           endpoint_id: "0797948229",

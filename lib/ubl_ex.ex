@@ -17,7 +17,6 @@ defmodule UblEx do
         number: "F2024001",
         date: ~D[2024-01-15],
         expires: ~D[2024-02-14],
-        reverse_charge: false,
         supplier: %{
           endpoint_id: "0797948229",
           scheme: "0208",

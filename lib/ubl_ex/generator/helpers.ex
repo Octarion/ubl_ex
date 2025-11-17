@@ -69,31 +69,42 @@ defmodule UblEx.Generator.Helpers do
   @doc """
   Generate tax totals XML for all tax categories.
 
-  Groups details by VAT percentage and generates TaxSubtotal elements.
+  Groups details by VAT percentage and reverse charge status, then generates TaxSubtotal elements.
   """
-  def tax_totals(details, intra) do
+  def tax_totals(details) do
     details
     |> Enum.reduce(%{}, fn detail, agg ->
-      current = Map.get(agg, detail.vat, %{vat: Decimal.new(0), subtotal: Decimal.new(0)})
+      reverse_charge = Map.get(detail, :reverse_charge, false)
+      key = {detail.vat, reverse_charge}
+
+      current =
+        Map.get(agg, key, %{
+          vat: Decimal.new(0),
+          subtotal: Decimal.new(0),
+          reverse_charge: reverse_charge
+        })
+
       total_ex = ubl_line_total(detail)
       vat_amount = Decimal.mult(total_ex, detail.vat) |> Decimal.div(100) |> Decimal.round(2)
       subtotal = Decimal.add(current.subtotal, total_ex) |> Decimal.round(2)
       vat = Decimal.add(current.vat, vat_amount) |> Decimal.round(2)
-      Map.put(agg, detail.vat, %{vat: vat, subtotal: subtotal})
+      Map.put(agg, key, %{vat: vat, subtotal: subtotal, reverse_charge: reverse_charge})
     end)
-    |> Enum.map(&tax_sub_total(&1, intra))
+    |> Enum.map(&tax_sub_total/1)
   end
 
   @doc """
   Generate a TaxSubtotal XML element.
   """
-  def tax_sub_total({perc, %{vat: vat, subtotal: subtotal}}, intra) do
+  def tax_sub_total(
+        {{perc, _reverse_charge}, %{vat: vat, subtotal: subtotal, reverse_charge: reverse_charge}}
+      ) do
     """
         <cac:TaxSubtotal>
             <cbc:TaxableAmount currencyID="EUR">#{format(subtotal)}</cbc:TaxableAmount>
             <cbc:TaxAmount currencyID="EUR">#{format(vat)}</cbc:TaxAmount>
             <cac:TaxCategory>
-                #{tax(perc, intra)}
+                #{tax(perc, reverse_charge)}
                 <cac:TaxScheme>
                     <cbc:ID>VAT</cbc:ID>
                 </cac:TaxScheme>

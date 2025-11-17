@@ -22,7 +22,7 @@ Add `ubl_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ubl_ex, "~> 0.1.0"}
+    {:ubl_ex, "~> 0.5.0"}
   ]
 end
 ```
@@ -54,7 +54,6 @@ document_data = %{
   number: "F2024001",
   date: ~D[2024-01-15],
   expires: ~D[2024-02-14],
-  reverse_charge: false,
 
   supplier: %{
     endpoint_id: "0797948229",
@@ -102,7 +101,6 @@ credit_note_data = %{
   type: :credit,
   number: "C2024001",
   date: ~D[2024-01-20],
-  reverse_charge: false,
 
   # Reference original invoices
   billing_references: ["F2024001", "F2024002"],
@@ -209,7 +207,7 @@ UblEx includes an optional validator that validates your generated UBL documents
 ```elixir
 def deps do
   [
-    {:ubl_ex, "~> 0.3.1"},
+    {:ubl_ex, "~> 0.5.0"},
     {:req, "~> 0.5.0"}  # Required for validation
   ]
 end
@@ -283,7 +281,6 @@ result.warnings # List of warning messages
   number: "F2024001",
   date: ~D[2024-01-15],
   expires: ~D[2024-02-14],           # Invoices only
-  reverse_charge: false,              # EU intra-community reverse charge
   order_reference: "PO-12345",
   billing_references: ["F001"],       # Credit notes only
   payment_id: "+++000/2024/00186+++", # Optional: Belgian structured payment reference
@@ -322,7 +319,8 @@ result.warnings # List of warning messages
       quantity: Decimal.new("1.00"),
       price: Decimal.new("100.00"),
       vat: Decimal.new("21.00"),      # VAT percentage
-      discount: Decimal.new("0.00")   # Discount percentage
+      discount: Decimal.new("0.00"),  # Discount percentage
+      reverse_charge: false           # Optional: EU intra-community reverse charge (defaults to false)
     }
   ],
 
@@ -394,17 +392,27 @@ Generate XML wrapped in SBDH (Standard Business Document Header) for Peppol netw
 
 ## EU Reverse Charge (Intra-Community Transactions)
 
-For B2B transactions between EU countries where the customer is liable for VAT:
+For B2B transactions between EU countries where the customer is liable for VAT, set `reverse_charge: true` on individual line items:
 
 ```elixir
 document_data = %{
+  type: :invoice,
+  number: "F2024001",
   # ...
-  reverse_charge: true,  # Triggers tax category "K" in UBL
-  # ...
+  details: [
+    %{
+      name: "Consulting Services",
+      quantity: Decimal.new("1.00"),
+      price: Decimal.new("1000.00"),
+      vat: Decimal.new("0.00"),        # 0% VAT for reverse charge
+      discount: Decimal.new("0.00"),
+      reverse_charge: true             # Triggers tax category "K" in UBL
+    }
+  ]
 }
 ```
 
-This generates the correct UBL tax category for intra-community reverse charge transactions according to EU VAT regulations.
+This generates the correct UBL tax category "K" for intra-community reverse charge transactions according to EU VAT regulations. You can mix regular and reverse charge line items in the same invoice.
 
 ## Real-World Usage
 
@@ -450,7 +458,6 @@ defmodule MyApp.Invoices do
       number: invoice.number,
       date: invoice.date,
       expires: invoice.due_date,
-      reverse_charge: invoice.reverse_charge?,
 
       supplier: %{
         endpoint_id: invoice.supplier.endpoint_id,
@@ -482,7 +489,8 @@ defmodule MyApp.Invoices do
           quantity: item.quantity,
           price: item.unit_price,
           vat: item.vat_rate,
-          discount: item.discount_percentage
+          discount: item.discount_percentage,
+          reverse_charge: item.reverse_charge || false
         }
       end)
     }

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-17
+
+### Changed
+- **BREAKING:** `reverse_charge` is now a per-line setting instead of document-wide
+  - Previously: `reverse_charge` was set at the document level and applied to all line items
+  - Now: `reverse_charge` must be set on individual line items in the `details` array
+  - Migration: Move `reverse_charge: true` from document root to each applicable line item
+  - Benefit: Allows mixing regular and reverse charge line items in the same invoice
+  - Default: Line items without `reverse_charge` field default to `false`
+  - Parser: Now extracts `reverse_charge` per line based on TaxCategory ID ("K" = reverse charge)
+
 ## [0.4.0] - 2025-10-17
 
 ### Added

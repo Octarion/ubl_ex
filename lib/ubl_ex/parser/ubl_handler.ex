@@ -151,9 +151,10 @@ defmodule UblEx.Parser.UblHandler do
             state.document_type == :application_response ->
           put_result(state, :document_reference, parse_document_id(text))
 
-        local_name == "ID" and in_path?(state.path, ["TaxCategory"]) ->
+        local_name == "ID" and in_path?(state.path, ["ClassifiedTaxCategory"]) and
+            not is_nil(state.current_line) ->
           reverse_charge = text == "K"
-          put_result(state, :reverse_charge, reverse_charge)
+          %{state | current_line: Map.put(state.current_line, :reverse_charge, reverse_charge)}
 
         # Payment fields
         local_name == "PaymentMeansCode" and state.in_payment_means ->
@@ -361,6 +362,7 @@ defmodule UblEx.Parser.UblHandler do
     price = safe_float(line[:price_text])
     vat_percent = safe_float(line[:vat_text])
     line_total = safe_float(line[:line_total_text])
+    reverse_charge = Map.get(line, :reverse_charge, false)
 
     discount = calculate_discount(quantity, price, line_total)
 
@@ -369,7 +371,8 @@ defmodule UblEx.Parser.UblHandler do
       quantity: safe_decimal(quantity),
       price: safe_decimal(price),
       vat: safe_decimal(vat_percent),
-      discount: discount
+      discount: discount,
+      reverse_charge: reverse_charge
     }
 
     %{state | line_items: [completed_line | state.line_items], current_line: nil}

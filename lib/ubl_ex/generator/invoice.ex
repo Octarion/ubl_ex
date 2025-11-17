@@ -13,7 +13,6 @@ defmodule UblEx.Generator.Invoice do
     number = document_data.number
     customer = document_data.customer
     supplier = document_data.supplier
-    reverse_charge = Map.get(document_data, :reverse_charge, false)
     vat_number = Helpers.vat_number(customer.vat)
     customer_endpoint_id = Map.get(customer, :endpoint_id, vat_number)
     customer_scheme = Map.get(customer, :scheme, "0208")
@@ -29,7 +28,7 @@ defmodule UblEx.Generator.Invoice do
         vat_amount = Decimal.mult(total_ex, detail.vat) |> Decimal.div(100) |> Decimal.round(2)
         [%{index: index, detail: detail, total_ex: total_ex, vat_amount: vat_amount} | agg]
       end)
-      |> Enum.map(&invoice_line(&1, reverse_charge))
+      |> Enum.map(&invoice_line/1)
 
     order_reference = Map.get(document_data, :order_reference, "NA")
 
@@ -112,7 +111,7 @@ defmodule UblEx.Generator.Invoice do
     #{payment_means(document_data, supplier)}
     <cac:TaxTotal>
         <cbc:TaxAmount currencyID="EUR">#{Helpers.format(totals.vat)}</cbc:TaxAmount>
-        #{Helpers.tax_totals(document_data.details, reverse_charge)}
+        #{Helpers.tax_totals(document_data.details)}
     </cac:TaxTotal>
     <cac:LegalMonetaryTotal>
         <cbc:LineExtensionAmount currencyID="EUR">#{Helpers.format(totals.subtotal)}</cbc:LineExtensionAmount>
@@ -125,8 +124,9 @@ defmodule UblEx.Generator.Invoice do
     """
   end
 
-  defp invoice_line(line, reverse_charge) do
+  defp invoice_line(line) do
     detail = line.detail
+    reverse_charge = Map.get(detail, :reverse_charge, false)
 
     allowance_charge =
       if Decimal.gt?(detail.discount, 0), do: Helpers.allowance_charge_xml(detail), else: ""
