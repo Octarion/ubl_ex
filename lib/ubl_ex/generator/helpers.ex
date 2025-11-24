@@ -6,6 +6,67 @@ defmodule UblEx.Generator.Helpers do
   and generating XML fragments.
   """
 
+  @country_schemes %{
+    "AT" => "9915",
+    "BE" => "0208",
+    "BG" => "9926",
+    "CY" => "9928",
+    "CZ" => "9929",
+    "DE" => "0204",
+    "DK" => "0096",
+    "EE" => "9931",
+    "ES" => "9920",
+    "FI" => "0037",
+    "FR" => "0009",
+    "GR" => "9933",
+    "HR" => "9934",
+    "HU" => "9910",
+    "IE" => "9935",
+    "IT" => "0201",
+    "LT" => "9937",
+    "LU" => "9938",
+    "LV" => "9939",
+    "MT" => "9943",
+    "NL" => "0106",
+    "PL" => "9945",
+    "PT" => "9946",
+    "RO" => "9947",
+    "SE" => "0007",
+    "SI" => "9949",
+    "SK" => "9950"
+  }
+
+  @default_scheme "0088"
+
+  @doc """
+  Infer Peppol scheme ID from country code.
+
+  Returns the country-specific scheme if known, otherwise returns "0088" (EAN/GLN).
+
+  ## Examples
+
+      iex> UblEx.Generator.Helpers.infer_scheme("BE")
+      "0208"
+
+      iex> UblEx.Generator.Helpers.infer_scheme("US")
+      "0088"
+  """
+  def infer_scheme(country) when is_binary(country) do
+    Map.get(@country_schemes, country, @default_scheme)
+  end
+
+  def infer_scheme(_), do: @default_scheme
+
+  @doc """
+  Get scheme for a party, using explicit scheme if provided, otherwise inferring from country.
+  """
+  def party_scheme(party) do
+    case Map.get(party, :scheme) do
+      nil -> infer_scheme(Map.get(party, :country))
+      scheme -> scheme
+    end
+  end
+
   @tax_category_codes %{
     standard: "S",
     zero_rated: "Z",

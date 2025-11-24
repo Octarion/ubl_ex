@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2025-11-24
+
+### Fixed
+- Customer VAT number now preserved as-is instead of being reconstructed from customer country
+  - Previously: A Swiss customer with Belgian VAT `BE0123456749` would incorrectly become `CH0123456749`
+  - Now: The original VAT number is used directly in the PartyTaxScheme/CompanyID element
+
+### Added
+- Automatic Peppol scheme inference from country code via `Helpers.infer_scheme/1` and `Helpers.party_scheme/1`
+  - If `scheme` is not explicitly set, it is now inferred from the party's `country` field
+  - Supports all EU member states with their primary Peppol scheme IDs
+  - Falls back to `"0088"` (EAN/GLN) for unmapped countries
+
+### Changed
+- External validation tests (peppol.helger.com) are now excluded by default to avoid rate limiting
+  - Run with `mix test --include external` to include validation tests
+
 ## [0.6.0] - 2025-11-24
 
 ### Changed

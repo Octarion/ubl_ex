@@ -288,7 +288,7 @@ result.warnings # List of warning messages
   # Supplier information
   supplier: %{
     endpoint_id: "0797948229",
-    scheme: "0208",                   # Peppol scheme ID
+    scheme: "0208",                   # Optional: inferred from country if not set
     name: "Company Name",
     street: "Street 123",
     city: "City",
@@ -302,7 +302,7 @@ result.warnings # List of warning messages
   # Customer information
   customer: %{
     endpoint_id: "0012345625",
-    scheme: "0208",
+    # scheme: "0208",                 # Optional: inferred from country if not set
     name: "Customer Name",
     vat: "BE0012345625",
     street: "Customer Street",
@@ -458,6 +458,44 @@ details: [
   }
 ]
 ```
+
+## Peppol Scheme IDs
+
+The `scheme` field on supplier and customer is optional. If not provided, it is automatically inferred from the `country` field using the following mappings:
+
+| Country | Scheme | Description |
+|---------|--------|-------------|
+| AT | 9915 | Austria - VAT |
+| BE | 0208 | Belgium - KBO/BCE |
+| BG | 9926 | Bulgaria - VAT |
+| CY | 9928 | Cyprus - VAT |
+| CZ | 9929 | Czech Republic - VAT |
+| DE | 0204 | Germany - Leitweg-ID |
+| DK | 0096 | Denmark - CVR |
+| EE | 9931 | Estonia - VAT |
+| ES | 9920 | Spain - VAT |
+| FI | 0037 | Finland - LY-tunnus |
+| FR | 0009 | France - SIRET |
+| GR | 9933 | Greece - VAT |
+| HR | 9934 | Croatia - VAT |
+| HU | 9910 | Hungary - VAT |
+| IE | 9935 | Ireland - VAT |
+| IT | 0201 | Italy - Codice Fiscale |
+| LT | 9937 | Lithuania - VAT |
+| LU | 9938 | Luxembourg - VAT |
+| LV | 9939 | Latvia - VAT |
+| MT | 9943 | Malta - VAT |
+| NL | 0106 | Netherlands - KvK |
+| PL | 9945 | Poland - VAT |
+| PT | 9946 | Portugal - VAT |
+| RO | 9947 | Romania - VAT |
+| SE | 0007 | Sweden - Organisationsnummer |
+| SI | 9949 | Slovenia - VAT |
+| SK | 9950 | Slovakia - VAT |
+
+For countries not in this list, the fallback is `0088` (EAN/GLN - international).
+
+You can always override the inferred scheme by explicitly setting the `scheme` field on the party.
 
 ## Real-World Usage
 

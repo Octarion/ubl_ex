@@ -15,7 +15,7 @@ defmodule UblEx.Generator.CreditNote do
     supplier = document_data.supplier
     vat_number = Helpers.vat_number(customer.vat)
     customer_endpoint_id = Map.get(customer, :endpoint_id, vat_number)
-    customer_scheme = Map.get(customer, :scheme, "0208")
+    customer_scheme = Helpers.party_scheme(customer)
 
     totals = Helpers.ubl_totals(document_data.details)
 
@@ -54,7 +54,7 @@ defmodule UblEx.Generator.CreditNote do
     </cac:AdditionalDocumentReference>
     <cac:AccountingSupplierParty>
         <cac:Party>
-            <cbc:EndpointID schemeID="#{supplier.scheme || "0208"}">#{supplier.endpoint_id}</cbc:EndpointID>
+            <cbc:EndpointID schemeID="#{Helpers.party_scheme(supplier)}">#{supplier.endpoint_id}</cbc:EndpointID>
             <cac:PartyName>
                 <cbc:Name>#{Helpers.escape(supplier.name)}</cbc:Name>
             </cac:PartyName>
@@ -96,7 +96,7 @@ defmodule UblEx.Generator.CreditNote do
                 </cac:Country>
             </cac:PostalAddress>
             <cac:PartyTaxScheme>
-                <cbc:CompanyID>#{customer.country}#{vat_number}</cbc:CompanyID>
+                <cbc:CompanyID>#{customer.vat}</cbc:CompanyID>
                 <cac:TaxScheme>
                     <cbc:ID>VAT</cbc:ID>
                 </cac:TaxScheme>

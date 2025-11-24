@@ -524,6 +524,181 @@ defmodule UblExTest do
     end
   end
 
+  describe "scheme inference" do
+    test "infers scheme from country when not explicitly set" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          name: "German Supplier",
+          street: "Hauptstraße",
+          city: "Berlin",
+          zipcode: "10115",
+          country: "DE",
+          vat: "DE123456789",
+          email: "test@test.de"
+        },
+        customer: %{
+          name: "French Customer",
+          vat: "FR12345678901",
+          street: "Rue de Paris",
+          housenumber: "1",
+          city: "Paris",
+          zipcode: "75001",
+          country: "FR"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("19"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ ~s(schemeID="0204")
+      assert xml =~ ~s(schemeID="0009")
+    end
+
+    test "uses explicit scheme when provided" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0088",
+          name: "Supplier",
+          street: "Street",
+          city: "City",
+          zipcode: "1000",
+          country: "DE",
+          vat: "DE123456789",
+          email: "test@test.de"
+        },
+        customer: %{
+          scheme: "0088",
+          name: "Customer",
+          vat: "FR12345678901",
+          street: "Street",
+          housenumber: "1",
+          city: "City",
+          zipcode: "75001",
+          country: "FR"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("19"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ ~s(schemeID="0088")
+      refute xml =~ ~s(schemeID="0204")
+      refute xml =~ ~s(schemeID="0009")
+    end
+
+    test "falls back to 0088 for unknown country" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "123456789",
+          name: "US Supplier",
+          street: "Main Street",
+          city: "New York",
+          zipcode: "10001",
+          country: "US",
+          vat: "US123456789",
+          email: "test@test.us"
+        },
+        customer: %{
+          name: "US Customer",
+          vat: "US987654321",
+          street: "Broadway",
+          housenumber: "1",
+          city: "New York",
+          zipcode: "10002",
+          country: "US"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ ~s(schemeID="0088")
+    end
+  end
+
+  describe "customer VAT handling" do
+    test "preserves customer VAT number when country differs from VAT country" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Test Supplier",
+          street: "Test Street",
+          city: "Test City",
+          zipcode: "1000",
+          country: "BE",
+          vat: "BE0797948229",
+          email: "test@test.com"
+        },
+        customer: %{
+          name: "Swiss Customer with Belgian VAT",
+          vat: "BE0123456749",
+          street: "Bahnhofstrasse",
+          housenumber: "1",
+          city: "Zürich",
+          zipcode: "8001",
+          country: "CH"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:CompanyID>BE0123456749</cbc:CompanyID>"
+      refute xml =~ "<cbc:CompanyID>CH0123456749</cbc:CompanyID>"
+    end
+  end
+
   describe "round-trip" do
     test "invoice survives parse -> generate -> parse cycle" do
       original_xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
