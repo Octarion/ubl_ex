@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-11-24
+
+### Changed
+- **BREAKING:** Replaced `reverse_charge` boolean with `tax_category` atom for full Peppol BIS 3.0 tax category support
+  - Previously: `reverse_charge: true` triggered tax category "K" (intra-community)
+  - Now: Use `tax_category: :intra_community` for EU cross-border B2B transactions
+  - Migration: Replace `reverse_charge: true` with `tax_category: :intra_community`
+  - Migration: Remove `reverse_charge: false` (no replacement needed, `:standard` is the default)
+
+### Added
+- Full tax category support with descriptive atoms:
+  - `:standard` (S) - Standard rated VAT (default for 6/12/21%)
+  - `:zero_rated` (Z) - Zero rated goods (default for 0% VAT)
+  - `:exempt` (E) - Exempt from tax
+  - `:reverse_charge` (AE) - Domestic reverse charge
+  - `:intra_community` (K) - EU cross-border B2B (intra-community supply)
+  - `:export` (G) - Export outside EU
+  - `:outside_scope` (O) - Services outside scope of tax
+- Automatic inference: If `tax_category` not specified, defaults to `:standard` for non-zero VAT and `:zero_rated` for 0% VAT
+- Parser now converts Peppol codes back to descriptive atoms for round-trip fidelity
+
 ## [0.5.0] - 2025-11-17
 
 ### Changed

@@ -63,6 +63,44 @@ defmodule UblEx do
         :application_response -> handle_response(parsed)
       end
 
+  ## Tax Categories
+
+  Line items support all Peppol BIS 3.0 tax categories via the optional `tax_category` field:
+
+  | Atom | Peppol Code | Use Case |
+  |------|-------------|----------|
+  | `:standard` | S | Standard rated VAT (default for 6/12/21%) |
+  | `:zero_rated` | Z | Zero rated goods (default for 0% VAT) |
+  | `:exempt` | E | Exempt from tax |
+  | `:reverse_charge` | AE | Domestic reverse charge |
+  | `:intra_community` | K | EU cross-border B2B (intra-community supply) |
+  | `:export` | G | Export outside EU |
+  | `:outside_scope` | O | Services outside scope of tax |
+
+  If `tax_category` is not specified, it defaults to `:standard` for non-zero VAT
+  and `:zero_rated` for 0% VAT.
+
+  ### Example with Tax Categories
+
+      details: [
+        %{
+          name: "Standard Service",
+          quantity: Decimal.new("1.00"),
+          price: Decimal.new("100.00"),
+          vat: Decimal.new("21.00"),
+          discount: Decimal.new("0.00")
+          # tax_category defaults to :standard
+        },
+        %{
+          name: "EU Cross-Border Service",
+          quantity: Decimal.new("1.00"),
+          price: Decimal.new("500.00"),
+          vat: Decimal.new("0.00"),
+          discount: Decimal.new("0.00"),
+          tax_category: :intra_community
+        }
+      ]
+
   ## Usage Pattern
 
   Parse documents and handle them in your own code:

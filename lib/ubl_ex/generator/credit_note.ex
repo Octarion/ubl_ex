@@ -126,7 +126,7 @@ defmodule UblEx.Generator.CreditNote do
 
   defp credit_note_line(line) do
     detail = line.detail
-    reverse_charge = Map.get(detail, :reverse_charge, false)
+    tax_category = Helpers.infer_tax_category(detail)
 
     allowance_charge =
       if Decimal.gt?(detail.discount, 0), do: Helpers.allowance_charge_xml(detail), else: ""
@@ -140,7 +140,7 @@ defmodule UblEx.Generator.CreditNote do
             <cbc:Description>#{Helpers.escape(detail.name)}</cbc:Description>
             <cbc:Name>#{Helpers.escape(detail.name)}</cbc:Name>
             <cac:ClassifiedTaxCategory>
-                #{Helpers.tax(detail.vat, reverse_charge)}
+                #{Helpers.tax(detail.vat, tax_category)}
                 <cac:TaxScheme>
                     <cbc:ID>VAT</cbc:ID>
                 </cac:TaxScheme>

@@ -324,6 +324,206 @@ defmodule UblExTest do
     end
   end
 
+  describe "tax_category" do
+    test "generates invoice with standard tax category (default)" do
+      data =
+        invoice_data([
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>S</cbc:ID>"
+      assert xml =~ "<cbc:Percent>21</cbc:Percent>"
+    end
+
+    test "generates invoice with intra-community tax category" do
+      data =
+        invoice_data([
+          %{
+            name: "EU Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :intra_community
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>K</cbc:ID>"
+      assert xml =~ "<cbc:Percent>0</cbc:Percent>"
+    end
+
+    test "generates invoice with reverse charge tax category" do
+      data =
+        invoice_data([
+          %{
+            name: "Domestic Reverse Charge",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :reverse_charge
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>AE</cbc:ID>"
+    end
+
+    test "generates invoice with exempt tax category" do
+      data =
+        invoice_data([
+          %{
+            name: "Exempt Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :exempt
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>E</cbc:ID>"
+    end
+
+    test "generates invoice with export tax category" do
+      data =
+        invoice_data([
+          %{
+            name: "Export Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :export
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>G</cbc:ID>"
+    end
+
+    test "generates invoice with outside_scope tax category" do
+      data =
+        invoice_data([
+          %{
+            name: "Out of Scope Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :outside_scope
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>O</cbc:ID>"
+    end
+
+    test "generates invoice with zero_rated tax category" do
+      data =
+        invoice_data([
+          %{
+            name: "Zero Rated Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :zero_rated
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>Z</cbc:ID>"
+    end
+
+    test "defaults 0% vat to zero_rated when no tax_category specified" do
+      data =
+        invoice_data([
+          %{
+            name: "Zero VAT Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>Z</cbc:ID>"
+    end
+
+    test "generates invoice with mixed tax categories" do
+      data =
+        invoice_data([
+          %{
+            name: "Standard Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          },
+          %{
+            name: "EU Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("200"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :intra_community
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>S</cbc:ID>"
+      assert xml =~ "<cbc:ID>K</cbc:ID>"
+    end
+
+    test "tax_category survives round-trip" do
+      data =
+        invoice_data([
+          %{
+            name: "EU Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :intra_community
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      assert hd(parsed.details).tax_category == :intra_community
+    end
+
+    test "standard tax_category is not included in parsed output (default)" do
+      data =
+        invoice_data([
+          %{
+            name: "Standard Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      refute Map.has_key?(hd(parsed.details), :tax_category)
+    end
+  end
+
   describe "round-trip" do
     test "invoice survives parse -> generate -> parse cycle" do
       original_xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
@@ -391,5 +591,35 @@ defmodule UblExTest do
       assert parsed1.sender.name == parsed2.sender.name
       assert parsed1.receiver.name == parsed2.receiver.name
     end
+  end
+
+  defp invoice_data(details) do
+    %{
+      type: :invoice,
+      number: "F001",
+      date: ~D[2024-01-15],
+      expires: ~D[2024-02-14],
+      supplier: %{
+        endpoint_id: "0797948229",
+        scheme: "0208",
+        name: "Test Supplier",
+        street: "Test Street",
+        city: "Test City",
+        zipcode: "1000",
+        country: "BE",
+        vat: "BE0797948229",
+        email: "test@test.com"
+      },
+      customer: %{
+        name: "Test Customer",
+        vat: "BE0456789012",
+        street: "Customer Street",
+        housenumber: "1",
+        city: "Customer City",
+        zipcode: "2000",
+        country: "BE"
+      },
+      details: details
+    }
   end
 end

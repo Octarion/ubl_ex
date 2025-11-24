@@ -6,6 +6,48 @@ defmodule UblEx.Generator.Helpers do
   and generating XML fragments.
   """
 
+  @tax_category_codes %{
+    standard: "S",
+    zero_rated: "Z",
+    exempt: "E",
+    reverse_charge: "AE",
+    intra_community: "K",
+    export: "G",
+    outside_scope: "O"
+  }
+
+  @peppol_code_to_category Map.new(@tax_category_codes, fn {k, v} -> {v, k} end)
+
+  @doc """
+  Convert a Peppol tax category code to a descriptive atom.
+
+  Returns `:standard` for unknown codes.
+  """
+  def peppol_code_to_category(code) do
+    Map.get(@peppol_code_to_category, code, :standard)
+  end
+
+  @doc """
+  Infer tax category from detail, defaulting based on VAT percentage.
+
+  If `tax_category` is explicitly set, use it. Otherwise:
+  - VAT 6%, 12%, 21% → :standard
+  - VAT 0% → :zero_rated
+  """
+  def infer_tax_category(detail) do
+    case Map.get(detail, :tax_category) do
+      nil -> default_tax_category(detail.vat)
+      category -> category
+    end
+  end
+
+  defp default_tax_category(vat) when is_struct(vat, Decimal) do
+    if Decimal.eq?(vat, 0), do: :zero_rated, else: :standard
+  end
+
+  defp default_tax_category(0), do: :zero_rated
+  defp default_tax_category(_), do: :standard
+
   @doc """
   Calculate UBL-compliant line total for a detail item.
 
@@ -69,26 +111,26 @@ defmodule UblEx.Generator.Helpers do
   @doc """
   Generate tax totals XML for all tax categories.
 
-  Groups details by VAT percentage and reverse charge status, then generates TaxSubtotal elements.
+  Groups details by VAT percentage and tax category, then generates TaxSubtotal elements.
   """
   def tax_totals(details) do
     details
     |> Enum.reduce(%{}, fn detail, agg ->
-      reverse_charge = Map.get(detail, :reverse_charge, false)
-      key = {detail.vat, reverse_charge}
+      tax_category = infer_tax_category(detail)
+      key = {detail.vat, tax_category}
 
       current =
         Map.get(agg, key, %{
           vat: Decimal.new(0),
           subtotal: Decimal.new(0),
-          reverse_charge: reverse_charge
+          tax_category: tax_category
         })
 
       total_ex = ubl_line_total(detail)
       vat_amount = Decimal.mult(total_ex, detail.vat) |> Decimal.div(100) |> Decimal.round(2)
       subtotal = Decimal.add(current.subtotal, total_ex) |> Decimal.round(2)
       vat = Decimal.add(current.vat, vat_amount) |> Decimal.round(2)
-      Map.put(agg, key, %{vat: vat, subtotal: subtotal, reverse_charge: reverse_charge})
+      Map.put(agg, key, %{vat: vat, subtotal: subtotal, tax_category: tax_category})
     end)
     |> Enum.map(&tax_sub_total/1)
   end
@@ -97,14 +139,14 @@ defmodule UblEx.Generator.Helpers do
   Generate a TaxSubtotal XML element.
   """
   def tax_sub_total(
-        {{perc, _reverse_charge}, %{vat: vat, subtotal: subtotal, reverse_charge: reverse_charge}}
+        {{perc, _tax_category}, %{vat: vat, subtotal: subtotal, tax_category: tax_category}}
       ) do
     """
         <cac:TaxSubtotal>
             <cbc:TaxableAmount currencyID="EUR">#{format(subtotal)}</cbc:TaxableAmount>
             <cbc:TaxAmount currencyID="EUR">#{format(vat)}</cbc:TaxAmount>
             <cac:TaxCategory>
-                #{tax(perc, reverse_charge)}
+                #{tax(perc, tax_category)}
                 <cac:TaxScheme>
                     <cbc:ID>VAT</cbc:ID>
                 </cac:TaxScheme>
@@ -116,21 +158,20 @@ defmodule UblEx.Generator.Helpers do
   @doc """
   Generate tax category XML (ID and Percent).
 
-  Accepts either integer or Decimal percentages.
+  Accepts VAT percentage (integer or Decimal) and tax category atom.
   """
-  def tax(perc, intra) when is_struct(perc, Decimal) do
-    tax(Decimal.to_integer(perc), intra)
+  def tax(perc, tax_category) when is_struct(perc, Decimal) do
+    tax(Decimal.to_integer(perc), tax_category)
   end
 
-  def tax(0, false), do: tax("Z", "0")
-  def tax(0, true), do: tax("K", "0")
-  def tax(6, _), do: tax("S", "6")
-  def tax(12, _), do: tax("S", "12")
-  def tax(21, _), do: tax("S", "21")
+  def tax(perc, tax_category) when is_atom(tax_category) do
+    code = Map.fetch!(@tax_category_codes, tax_category)
+    tax_xml(code, perc)
+  end
 
-  def tax(id, percent) do
+  defp tax_xml(code, percent) do
     """
-    <cbc:ID>#{id}</cbc:ID>
+    <cbc:ID>#{code}</cbc:ID>
                   <cbc:Percent>#{percent}</cbc:Percent>\
     """
   end

@@ -4,6 +4,8 @@ defmodule UblEx.Parser.UblHandler do
   Knows the UBL structure and builds the result directly without XPath.
   """
 
+  alias UblEx.Generator.Helpers
+
   @behaviour Saxy.Handler
 
   defstruct [
@@ -151,10 +153,10 @@ defmodule UblEx.Parser.UblHandler do
             state.document_type == :application_response ->
           put_result(state, :document_reference, parse_document_id(text))
 
-        local_name == "ID" and in_path?(state.path, ["ClassifiedTaxCategory"]) and
+        local_name == "ID" and match?(["ID", "ClassifiedTaxCategory" | _], state.path) and
             not is_nil(state.current_line) ->
-          reverse_charge = text == "K"
-          %{state | current_line: Map.put(state.current_line, :reverse_charge, reverse_charge)}
+          tax_category = Helpers.peppol_code_to_category(text)
+          %{state | current_line: Map.put(state.current_line, :tax_category, tax_category)}
 
         # Payment fields
         local_name == "PaymentMeansCode" and state.in_payment_means ->
@@ -362,21 +364,26 @@ defmodule UblEx.Parser.UblHandler do
     price = safe_float(line[:price_text])
     vat_percent = safe_float(line[:vat_text])
     line_total = safe_float(line[:line_total_text])
-    reverse_charge = Map.get(line, :reverse_charge, false)
+    tax_category = Map.get(line, :tax_category)
 
     discount = calculate_discount(quantity, price, line_total)
 
-    completed_line = %{
-      name: line[:name],
-      quantity: safe_decimal(quantity),
-      price: safe_decimal(price),
-      vat: safe_decimal(vat_percent),
-      discount: discount,
-      reverse_charge: reverse_charge
-    }
+    completed_line =
+      %{
+        name: line[:name],
+        quantity: safe_decimal(quantity),
+        price: safe_decimal(price),
+        vat: safe_decimal(vat_percent),
+        discount: discount
+      }
+      |> maybe_add_tax_category(tax_category)
 
     %{state | line_items: [completed_line | state.line_items], current_line: nil}
   end
+
+  defp maybe_add_tax_category(line, nil), do: line
+  defp maybe_add_tax_category(line, :standard), do: line
+  defp maybe_add_tax_category(line, tax_category), do: Map.put(line, :tax_category, tax_category)
 
   defp safe_float(nil), do: 0.0
   defp safe_float(""), do: 0.0

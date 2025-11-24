@@ -22,7 +22,7 @@ Add `ubl_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ubl_ex, "~> 0.5.0"}
+    {:ubl_ex, "~> 0.6.0"}
   ]
 end
 ```
@@ -207,7 +207,7 @@ UblEx includes an optional validator that validates your generated UBL documents
 ```elixir
 def deps do
   [
-    {:ubl_ex, "~> 0.5.0"},
+    {:ubl_ex, "~> 0.6.0"},
     {:req, "~> 0.5.0"}  # Required for validation
   ]
 end
@@ -320,7 +320,7 @@ result.warnings # List of warning messages
       price: Decimal.new("100.00"),
       vat: Decimal.new("21.00"),      # VAT percentage
       discount: Decimal.new("0.00"),  # Discount percentage
-      reverse_charge: false           # Optional: EU intra-community reverse charge (defaults to false)
+      tax_category: :standard         # Optional: defaults to :standard for non-zero VAT, :zero_rated for 0%
     }
   ],
 
@@ -390,9 +390,23 @@ Generate XML based on the `:type` field in the data (`:invoice`, `:credit`, or `
 
 Generate XML wrapped in SBDH (Standard Business Document Header) for Peppol network transmission.
 
-## EU Reverse Charge (Intra-Community Transactions)
+## Tax Categories
 
-For B2B transactions between EU countries where the customer is liable for VAT, set `reverse_charge: true` on individual line items:
+UblEx supports all Peppol BIS 3.0 tax categories via the `tax_category` field on line items:
+
+| Atom | Peppol Code | Use Case |
+|------|-------------|----------|
+| `:standard` | S | Standard rated VAT (default for 6/12/21%) |
+| `:zero_rated` | Z | Zero rated goods (default for 0% VAT) |
+| `:exempt` | E | Exempt from tax |
+| `:reverse_charge` | AE | Domestic reverse charge |
+| `:intra_community` | K | EU cross-border B2B (intra-community supply) |
+| `:export` | G | Export outside EU |
+| `:outside_scope` | O | Services outside scope of tax |
+
+### EU Intra-Community Transactions
+
+For B2B transactions between EU countries where the customer is liable for VAT:
 
 ```elixir
 document_data = %{
@@ -404,15 +418,46 @@ document_data = %{
       name: "Consulting Services",
       quantity: Decimal.new("1.00"),
       price: Decimal.new("1000.00"),
-      vat: Decimal.new("0.00"),        # 0% VAT for reverse charge
+      vat: Decimal.new("0.00"),
       discount: Decimal.new("0.00"),
-      reverse_charge: true             # Triggers tax category "K" in UBL
+      tax_category: :intra_community   # Generates tax category "K" in UBL
     }
   ]
 }
 ```
 
-This generates the correct UBL tax category "K" for intra-community reverse charge transactions according to EU VAT regulations. You can mix regular and reverse charge line items in the same invoice.
+### Mixed Tax Categories
+
+You can mix different tax categories in the same invoice:
+
+```elixir
+details: [
+  %{
+    name: "Standard Service",
+    quantity: Decimal.new("1.00"),
+    price: Decimal.new("500.00"),
+    vat: Decimal.new("21.00"),
+    discount: Decimal.new("0.00")
+    # tax_category defaults to :standard
+  },
+  %{
+    name: "EU Cross-Border Service",
+    quantity: Decimal.new("1.00"),
+    price: Decimal.new("1000.00"),
+    vat: Decimal.new("0.00"),
+    discount: Decimal.new("0.00"),
+    tax_category: :intra_community
+  },
+  %{
+    name: "Export Service",
+    quantity: Decimal.new("1.00"),
+    price: Decimal.new("750.00"),
+    vat: Decimal.new("0.00"),
+    discount: Decimal.new("0.00"),
+    tax_category: :export
+  }
+]
+```
 
 ## Real-World Usage
 
@@ -484,14 +529,14 @@ defmodule MyApp.Invoices do
       },
 
       details: Enum.map(invoice.line_items, fn item ->
-        %{
+        base = %{
           name: item.description,
           quantity: item.quantity,
           price: item.unit_price,
           vat: item.vat_rate,
-          discount: item.discount_percentage,
-          reverse_charge: item.reverse_charge || false
+          discount: item.discount_percentage
         }
+        if item.tax_category, do: Map.put(base, :tax_category, item.tax_category), else: base
       end)
     }
 
