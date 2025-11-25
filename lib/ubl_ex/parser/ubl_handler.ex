@@ -16,9 +16,11 @@ defmodule UblEx.Parser.UblHandler do
     :current_line,
     :current_party,
     :current_attachment,
+    :current_tax_subtotal,
     :line_items,
     :attachments,
     :billing_refs,
+    :tax_exemptions,
     :in_payment_means
   ]
 
@@ -30,9 +32,11 @@ defmodule UblEx.Parser.UblHandler do
       current_text: "",
       current_line: nil,
       current_party: nil,
+      current_tax_subtotal: nil,
       line_items: [],
       attachments: [],
       billing_refs: [],
+      tax_exemptions: %{},
       in_payment_means: false
     }
   end
@@ -44,9 +48,11 @@ defmodule UblEx.Parser.UblHandler do
 
   @impl Saxy.Handler
   def handle_event(:end_document, _data, state) do
+    line_items_with_exemptions = apply_tax_exemptions(state.line_items, state.tax_exemptions)
+
     result =
       state.result
-      |> maybe_add(:details, Enum.reverse(state.line_items))
+      |> maybe_add(:details, Enum.reverse(line_items_with_exemptions))
       |> maybe_add(:attachments, Enum.reverse(state.attachments))
       |> maybe_add(:billing_references, Enum.reverse(state.billing_refs))
 
@@ -89,6 +95,9 @@ defmodule UblEx.Parser.UblHandler do
 
         local_name == "AdditionalDocumentReference" ->
           %{new_state | current_attachment: %{}}
+
+        local_name == "TaxSubtotal" and in_path?(state.path, ["TaxTotal"]) ->
+          %{new_state | current_tax_subtotal: %{}}
 
         local_name == "PaymentMeans" ->
           %{new_state | in_payment_means: true}
@@ -157,6 +166,30 @@ defmodule UblEx.Parser.UblHandler do
             not is_nil(state.current_line) ->
           tax_category = Helpers.peppol_code_to_category(text)
           %{state | current_line: Map.put(state.current_line, :tax_category, tax_category)}
+
+        local_name == "TaxExemptionReasonCode" and not is_nil(state.current_tax_subtotal) and
+            in_path?(state.path, ["TaxSubtotal", "TaxCategory"]) ->
+          subtotal = Map.put(state.current_tax_subtotal, :tax_exemption_reason_code, text)
+          %{state | current_tax_subtotal: subtotal}
+
+        local_name == "TaxExemptionReason" and not is_nil(state.current_tax_subtotal) and
+            in_path?(state.path, ["TaxSubtotal", "TaxCategory"]) ->
+          subtotal = Map.put(state.current_tax_subtotal, :tax_exemption_reason, text)
+          %{state | current_tax_subtotal: subtotal}
+
+        local_name == "ID" and not is_nil(state.current_tax_subtotal) and
+            match?(["ID", "TaxCategory", "TaxSubtotal" | _], state.path) ->
+          tax_category = Helpers.peppol_code_to_category(text)
+          subtotal = Map.put(state.current_tax_subtotal, :tax_category, tax_category)
+          %{state | current_tax_subtotal: subtotal}
+
+        local_name == "Percent" and not is_nil(state.current_tax_subtotal) and
+            in_path?(state.path, ["TaxSubtotal", "TaxCategory"]) ->
+          subtotal = Map.put(state.current_tax_subtotal, :vat_text, text)
+          %{state | current_tax_subtotal: subtotal}
+
+        local_name == "TaxSubtotal" and not is_nil(state.current_tax_subtotal) ->
+          finalize_tax_subtotal(state)
 
         # Payment fields
         local_name == "PaymentMeansCode" and state.in_payment_means ->
@@ -412,4 +445,45 @@ defmodule UblEx.Parser.UblHandler do
   end
 
   defp calculate_discount(_, _, _), do: Decimal.new("0.00")
+
+  defp finalize_tax_subtotal(state) do
+    subtotal = state.current_tax_subtotal
+
+    if subtotal[:tax_category] && subtotal[:vat_text] do
+      vat_percent = safe_float(subtotal[:vat_text])
+      key = {vat_percent, subtotal[:tax_category]}
+
+      exemption_data = %{
+        tax_exemption_reason_code: subtotal[:tax_exemption_reason_code],
+        tax_exemption_reason: subtotal[:tax_exemption_reason]
+      }
+
+      new_exemptions = Map.put(state.tax_exemptions, key, exemption_data)
+      %{state | tax_exemptions: new_exemptions, current_tax_subtotal: nil}
+    else
+      %{state | current_tax_subtotal: nil}
+    end
+  end
+
+  defp apply_tax_exemptions(line_items, tax_exemptions) do
+    Enum.map(line_items, fn line ->
+      vat_float = Decimal.to_float(line.vat)
+      tax_category = Map.get(line, :tax_category, infer_default_category(line.vat))
+      key = {vat_float, tax_category}
+
+      case Map.get(tax_exemptions, key) do
+        nil ->
+          line
+
+        exemption_data ->
+          line
+          |> maybe_add(:tax_exemption_reason_code, exemption_data.tax_exemption_reason_code)
+          |> maybe_add(:tax_exemption_reason, exemption_data.tax_exemption_reason)
+      end
+    end)
+  end
+
+  defp infer_default_category(vat) when is_struct(vat, Decimal) do
+    if Decimal.eq?(vat, 0), do: :zero_rated, else: :standard
+  end
 end

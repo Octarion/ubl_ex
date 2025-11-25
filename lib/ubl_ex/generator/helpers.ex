@@ -184,14 +184,23 @@ defmodule UblEx.Generator.Helpers do
         Map.get(agg, key, %{
           vat: Decimal.new(0),
           subtotal: Decimal.new(0),
-          tax_category: tax_category
+          tax_category: tax_category,
+          tax_exemption_reason_code: Map.get(detail, :tax_exemption_reason_code),
+          tax_exemption_reason: Map.get(detail, :tax_exemption_reason)
         })
 
       total_ex = ubl_line_total(detail)
       vat_amount = Decimal.mult(total_ex, detail.vat) |> Decimal.div(100) |> Decimal.round(2)
       subtotal = Decimal.add(current.subtotal, total_ex) |> Decimal.round(2)
       vat = Decimal.add(current.vat, vat_amount) |> Decimal.round(2)
-      Map.put(agg, key, %{vat: vat, subtotal: subtotal, tax_category: tax_category})
+
+      Map.put(agg, key, %{
+        vat: vat,
+        subtotal: subtotal,
+        tax_category: tax_category,
+        tax_exemption_reason_code: Map.get(detail, :tax_exemption_reason_code),
+        tax_exemption_reason: Map.get(detail, :tax_exemption_reason)
+      })
     end)
     |> Enum.map(&tax_sub_total/1)
   end
@@ -200,14 +209,21 @@ defmodule UblEx.Generator.Helpers do
   Generate a TaxSubtotal XML element.
   """
   def tax_sub_total(
-        {{perc, _tax_category}, %{vat: vat, subtotal: subtotal, tax_category: tax_category}}
+        {{perc, _tax_category},
+         %{
+           vat: vat,
+           subtotal: subtotal,
+           tax_category: tax_category,
+           tax_exemption_reason_code: reason_code,
+           tax_exemption_reason: reason
+         }}
       ) do
     """
         <cac:TaxSubtotal>
             <cbc:TaxableAmount currencyID="EUR">#{format(subtotal)}</cbc:TaxableAmount>
             <cbc:TaxAmount currencyID="EUR">#{format(vat)}</cbc:TaxAmount>
             <cac:TaxCategory>
-                #{tax(perc, tax_category)}
+                #{tax(perc, tax_category, reason_code, reason)}
                 <cac:TaxScheme>
                     <cbc:ID>VAT</cbc:ID>
                 </cac:TaxScheme>
@@ -227,13 +243,44 @@ defmodule UblEx.Generator.Helpers do
 
   def tax(perc, tax_category) when is_atom(tax_category) do
     code = Map.fetch!(@tax_category_codes, tax_category)
-    tax_xml(code, perc)
+    tax_xml(code, perc, nil, nil)
   end
 
-  defp tax_xml(code, percent) do
+  @doc """
+  Generate tax category XML with optional exemption fields.
+
+  Includes TaxExemptionReasonCode and TaxExemptionReason when provided.
+  """
+  def tax(perc, tax_category, reason_code, reason) when is_struct(perc, Decimal) do
+    tax(Decimal.to_integer(perc), tax_category, reason_code, reason)
+  end
+
+  def tax(perc, tax_category, reason_code, reason) when is_atom(tax_category) do
+    code = Map.fetch!(@tax_category_codes, tax_category)
+    tax_xml(code, perc, reason_code, reason)
+  end
+
+  defp tax_xml(code, percent, nil, _reason) do
     """
     <cbc:ID>#{code}</cbc:ID>
                   <cbc:Percent>#{percent}</cbc:Percent>\
+    """
+  end
+
+  defp tax_xml(code, percent, reason_code, nil) do
+    """
+    <cbc:ID>#{code}</cbc:ID>
+                  <cbc:Percent>#{percent}</cbc:Percent>
+                  <cbc:TaxExemptionReasonCode>#{escape(reason_code)}</cbc:TaxExemptionReasonCode>\
+    """
+  end
+
+  defp tax_xml(code, percent, reason_code, reason) do
+    """
+    <cbc:ID>#{code}</cbc:ID>
+                  <cbc:Percent>#{percent}</cbc:Percent>
+                  <cbc:TaxExemptionReasonCode>#{escape(reason_code)}</cbc:TaxExemptionReasonCode>
+                  <cbc:TaxExemptionReason>#{escape(reason)}</cbc:TaxExemptionReason>\
     """
   end
 

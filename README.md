@@ -22,7 +22,7 @@ Add `ubl_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ubl_ex, "~> 0.6.0"}
+    {:ubl_ex, "~> 0.7.0"}
   ]
 end
 ```
@@ -320,7 +320,9 @@ result.warnings # List of warning messages
       price: Decimal.new("100.00"),
       vat: Decimal.new("21.00"),      # VAT percentage
       discount: Decimal.new("0.00"),  # Discount percentage
-      tax_category: :standard         # Optional: defaults to :standard for non-zero VAT, :zero_rated for 0%
+      tax_category: :standard,        # Optional: defaults to :standard for non-zero VAT, :zero_rated for 0%
+      tax_exemption_reason_code: "vatex-eu-ic",  # Required for E, G, K, AE tax categories
+      tax_exemption_reason: "Exemption reason"   # Required for E, G, K, AE tax categories
     }
   ],
 
@@ -420,7 +422,9 @@ document_data = %{
       price: Decimal.new("1000.00"),
       vat: Decimal.new("0.00"),
       discount: Decimal.new("0.00"),
-      tax_category: :intra_community   # Generates tax category "K" in UBL
+      tax_category: :intra_community,  # Generates tax category "K" in UBL
+      tax_exemption_reason_code: "vatex-eu-ic",
+      tax_exemption_reason: "Intra-community supply - Article 138 Directive 2006/112/EC"
     }
   ]
 }
@@ -438,7 +442,7 @@ details: [
     price: Decimal.new("500.00"),
     vat: Decimal.new("21.00"),
     discount: Decimal.new("0.00")
-    # tax_category defaults to :standard
+    # tax_category defaults to :standard, no exemption fields needed
   },
   %{
     name: "EU Cross-Border Service",
@@ -446,7 +450,9 @@ details: [
     price: Decimal.new("1000.00"),
     vat: Decimal.new("0.00"),
     discount: Decimal.new("0.00"),
-    tax_category: :intra_community
+    tax_category: :intra_community,
+    tax_exemption_reason_code: "vatex-eu-ic",
+    tax_exemption_reason: "Intra-community supply"
   },
   %{
     name: "Export Service",
@@ -454,7 +460,76 @@ details: [
     price: Decimal.new("750.00"),
     vat: Decimal.new("0.00"),
     discount: Decimal.new("0.00"),
-    tax_category: :export
+    tax_category: :export,
+    tax_exemption_reason_code: "vatex-eu-g",
+    tax_exemption_reason: "Export outside EU"
+  }
+]
+```
+
+### Tax Exemption Fields
+
+According to Peppol BIS 3.0 validation rules (BR-O-11 through BR-O-14), when using tax categories `:exempt` (E), `:export` (G), `:intra_community` (K), or `:reverse_charge` (AE), you **must** provide tax exemption information:
+
+- `tax_exemption_reason_code` - A VATEX code identifying the exemption reason
+- `tax_exemption_reason` - A human-readable explanation
+
+The VATEX code list follows the format `vatex-{country}-{code}`. Common codes include:
+
+- `vatex-eu-ic` - Intra-community supply (Art. 138 EU VAT Directive)
+- `vatex-eu-ae` - Reverse charge / Autoliquidation
+- `vatex-eu-g` - Export outside EU
+- `vatex-eu-132` - Exemptions for certain activities (medical, education, etc.)
+
+For the complete list of VATEX codes, see the [official Peppol VATEX code list](https://docs.peppol.eu/poacc/billing/3.0/codelist/vatex/).
+
+#### Example: Intra-Community Supply
+
+```elixir
+details: [
+  %{
+    name: "EU Cross-Border Service",
+    quantity: Decimal.new("1.00"),
+    price: Decimal.new("1000.00"),
+    vat: Decimal.new("0.00"),
+    discount: Decimal.new("0.00"),
+    tax_category: :intra_community,
+    tax_exemption_reason_code: "vatex-eu-ic",
+    tax_exemption_reason: "Intra-community supply - Article 138 Directive 2006/112/EC"
+  }
+]
+```
+
+#### Example: Domestic Reverse Charge
+
+```elixir
+details: [
+  %{
+    name: "Construction Services",
+    quantity: Decimal.new("1.00"),
+    price: Decimal.new("5000.00"),
+    vat: Decimal.new("0.00"),
+    discount: Decimal.new("0.00"),
+    tax_category: :reverse_charge,
+    tax_exemption_reason_code: "vatex-eu-ae",
+    tax_exemption_reason: "Reverse charge - VAT to be paid by the customer"
+  }
+]
+```
+
+#### Example: Export Outside EU
+
+```elixir
+details: [
+  %{
+    name: "Exported Goods",
+    quantity: Decimal.new("1.00"),
+    price: Decimal.new("2000.00"),
+    vat: Decimal.new("0.00"),
+    discount: Decimal.new("0.00"),
+    tax_category: :export,
+    tax_exemption_reason_code: "vatex-eu-g",
+    tax_exemption_reason: "Export outside EU - Article 146 Directive 2006/112/EC"
   }
 ]
 ```

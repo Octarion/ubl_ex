@@ -80,7 +80,22 @@ defmodule UblEx do
   If `tax_category` is not specified, it defaults to `:standard` for non-zero VAT
   and `:zero_rated` for 0% VAT.
 
-  ### Example with Tax Categories
+  ## Tax Exemption Fields
+
+  According to Peppol BIS 3.0 validation rules (BR-O-11 through BR-O-14), when using
+  tax categories `:exempt`, `:export`, `:intra_community`, or `:reverse_charge`, you
+  **must** provide tax exemption information via these fields:
+
+  - `tax_exemption_reason_code` - A VATEX code (e.g., "vatex-eu-ic", "vatex-eu-ae")
+  - `tax_exemption_reason` - A human-readable explanation (e.g., "Vrijgestelde intracommunautaire levering - Art. 39bis WBTW")
+
+  The `tax_exemption_reason_code` follows the format `vatex-{country}-{code}`:
+  - `vatex-eu-ic` - Intra-community supply
+  - `vatex-eu-ae` - Reverse charge / Autoliquidation
+  - `vatex-eu-g` - Export outside EU
+  - `vatex-be-xxx` - Belgian-specific codes
+
+  ### Example with Tax Categories and Exemption Fields
 
       details: [
         %{
@@ -97,7 +112,9 @@ defmodule UblEx do
           price: Decimal.new("500.00"),
           vat: Decimal.new("0.00"),
           discount: Decimal.new("0.00"),
-          tax_category: :intra_community
+          tax_category: :intra_community,
+          tax_exemption_reason_code: "vatex-eu-ic",
+          tax_exemption_reason: "Vrijgestelde intracommunautaire levering - Art. 39bis WBTW"
         }
       ]
 

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-11-25
+
+### Changed
+- **BREAKING:** Tax exemption fields now required for exempt/export/intra-community/reverse charge transactions per Peppol BIS 3.0 validation rules (BR-O-11 through BR-O-14)
+  - Previously: Tax categories E, G, K, AE generated without exemption reason fields
+  - Now: Must provide `tax_exemption_reason_code` and `tax_exemption_reason` for these categories
+  - Migration: Add VATEX codes and reasons to line items with tax_category `:exempt`, `:export`, `:intra_community`, or `:reverse_charge`
+  - Example: `tax_exemption_reason_code: "vatex-eu-ic", tax_exemption_reason: "Intra-community supply - Article 138 Directive 2006/112/EC"`
+  - Not required for: Standard VAT (S), zero-rated (Z), or outside scope (O) categories
+
+### Added
+- Tax exemption field support on line items:
+  - `tax_exemption_reason_code` - VATEX code (e.g., "vatex-eu-ic", "vatex-eu-ae", "vatex-eu-g")
+  - `tax_exemption_reason` - Human-readable explanation
+- Generator now includes exemption fields in TaxSubtotal sections when provided
+- Parser extracts exemption fields from TaxSubtotal and applies them to matching line items
+- Full round-trip support for exemption fields
+- Documentation with link to official Peppol VATEX code list
+- Comprehensive test coverage for all exemption scenarios
+
 ## [0.6.1] - 2025-11-24
 
 ### Fixed

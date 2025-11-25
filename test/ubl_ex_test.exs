@@ -524,6 +524,166 @@ defmodule UblExTest do
     end
   end
 
+  describe "tax exemption fields" do
+    test "generates invoice with intra-community exemption fields" do
+      data =
+        invoice_data([
+          %{
+            name: "EU Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :intra_community,
+            tax_exemption_reason_code: "vatex-eu-ic",
+            tax_exemption_reason: "Vrijgestelde intracommunautaire levering - Art. 39bis WBTW"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:TaxExemptionReasonCode>vatex-eu-ic</cbc:TaxExemptionReasonCode>"
+
+      assert xml =~
+               "<cbc:TaxExemptionReason>Vrijgestelde intracommunautaire levering - Art. 39bis WBTW</cbc:TaxExemptionReason>"
+    end
+
+    test "generates invoice with reverse charge exemption fields" do
+      data =
+        invoice_data([
+          %{
+            name: "Domestic RC",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :reverse_charge,
+            tax_exemption_reason_code: "vatex-eu-ae",
+            tax_exemption_reason: "BTW te voldoen door de medecontractant - Art. 51 §2 WBTW"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:TaxExemptionReasonCode>vatex-eu-ae</cbc:TaxExemptionReasonCode>"
+
+      assert xml =~
+               "<cbc:TaxExemptionReason>BTW te voldoen door de medecontractant - Art. 51 §2 WBTW</cbc:TaxExemptionReason>"
+    end
+
+    test "generates invoice with export exemption fields" do
+      data =
+        invoice_data([
+          %{
+            name: "Export Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :export,
+            tax_exemption_reason_code: "vatex-eu-g",
+            tax_exemption_reason: "Vrijgestelde uitvoer - Art. 39 WBTW"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:TaxExemptionReasonCode>vatex-eu-g</cbc:TaxExemptionReasonCode>"
+
+      assert xml =~
+               "<cbc:TaxExemptionReason>Vrijgestelde uitvoer - Art. 39 WBTW</cbc:TaxExemptionReason>"
+    end
+
+    test "generates invoice with exempt exemption fields" do
+      data =
+        invoice_data([
+          %{
+            name: "Medical Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :exempt,
+            tax_exemption_reason_code: "vatex-eu-132c",
+            tax_exemption_reason: "Vrijgestelde medische prestatie - Art. 44 §1 WBTW"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:TaxExemptionReasonCode>vatex-eu-132c</cbc:TaxExemptionReasonCode>"
+
+      assert xml =~
+               "<cbc:TaxExemptionReason>Vrijgestelde medische prestatie - Art. 44 §1 WBTW</cbc:TaxExemptionReason>"
+    end
+
+    test "parses exemption fields from XML" do
+      data =
+        invoice_data([
+          %{
+            name: "EU Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :intra_community,
+            tax_exemption_reason_code: "vatex-eu-ic",
+            tax_exemption_reason: "Vrijgestelde intracommunautaire levering - Art. 39bis WBTW"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      detail = hd(parsed.details)
+      assert detail.tax_exemption_reason_code == "vatex-eu-ic"
+
+      assert detail.tax_exemption_reason ==
+               "Vrijgestelde intracommunautaire levering - Art. 39bis WBTW"
+    end
+
+    test "generates invoice without exemption fields when not provided" do
+      data =
+        invoice_data([
+          %{
+            name: "Standard Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      refute xml =~ "<cbc:TaxExemptionReasonCode>"
+      refute xml =~ "<cbc:TaxExemptionReason>"
+    end
+
+    test "round-trip preserves exemption fields" do
+      data =
+        invoice_data([
+          %{
+            name: "EU Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("0"),
+            discount: Decimal.new("0"),
+            tax_category: :intra_community,
+            tax_exemption_reason_code: "vatex-eu-ic",
+            tax_exemption_reason: "Vrijgestelde intracommunautaire levering - Art. 39bis WBTW"
+          }
+        ])
+
+      xml1 = UblEx.generate(data)
+      {:ok, parsed1} = UblEx.parse(xml1)
+      xml2 = UblEx.generate(parsed1)
+      {:ok, parsed2} = UblEx.parse(xml2)
+
+      detail1 = hd(parsed1.details)
+      detail2 = hd(parsed2.details)
+
+      assert detail1.tax_exemption_reason_code == detail2.tax_exemption_reason_code
+      assert detail1.tax_exemption_reason == detail2.tax_exemption_reason
+      assert detail1.tax_category == detail2.tax_category
+    end
+  end
+
   describe "scheme inference" do
     test "infers scheme from country when not explicitly set" do
       data = %{
