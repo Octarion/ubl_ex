@@ -289,17 +289,10 @@ defmodule UblEx.Generator.Helpers do
   """
   def allowance_charge_xml(detail) do
     if Decimal.gt?(detail.discount, 0) do
-      line_total = ubl_line_total(detail)
-      percentage = detail.discount
-
-      multiplier_decimal = Decimal.div(percentage, 100)
-
-      base_amount =
-        Decimal.div(line_total, Decimal.sub(Decimal.new(1), multiplier_decimal))
-        |> Decimal.round(2)
+      base_amount = Decimal.mult(detail.quantity, detail.price) |> Decimal.round(2)
 
       allowance_amount =
-        Decimal.mult(base_amount, percentage) |> Decimal.div(100) |> Decimal.round(2)
+        Decimal.mult(base_amount, detail.discount) |> Decimal.div(100) |> Decimal.round(2)
 
       """
         <cac:AllowanceCharge>

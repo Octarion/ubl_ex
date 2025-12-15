@@ -928,6 +928,68 @@ defmodule UblExTest do
     end
   end
 
+  describe "discounts" do
+    test "generates invoice with 100% discount without division by zero" do
+      data =
+        invoice_data([
+          %{
+            name: "Free Service",
+            quantity: Decimal.new("2"),
+            price: Decimal.new("50"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("100")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:BaseAmount currencyID=\"EUR\">100.00</cbc:BaseAmount>"
+      assert xml =~ "<cbc:Amount currencyID=\"EUR\">100.00</cbc:Amount>"
+      assert xml =~ "<cbc:MultiplierFactorNumeric>100.00</cbc:MultiplierFactorNumeric>"
+      assert xml =~ "<cbc:ChargeIndicator>false</cbc:ChargeIndicator>"
+    end
+
+    test "generates invoice with partial discount" do
+      data =
+        invoice_data([
+          %{
+            name: "Discounted Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("20")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:BaseAmount currencyID=\"EUR\">100.00</cbc:BaseAmount>"
+      assert xml =~ "<cbc:Amount currencyID=\"EUR\">20.00</cbc:Amount>"
+      assert xml =~ "<cbc:MultiplierFactorNumeric>20.00</cbc:MultiplierFactorNumeric>"
+    end
+
+    test "100% discount invoice round-trip" do
+      data =
+        invoice_data([
+          %{
+            name: "Free Service",
+            quantity: Decimal.new("3"),
+            price: Decimal.new("75.50"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("100")
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      detail = hd(parsed.details)
+      assert Decimal.eq?(detail.quantity, Decimal.new("3"))
+      assert Decimal.eq?(detail.price, Decimal.new("75.50"))
+      assert Decimal.eq?(detail.discount, Decimal.new("100"))
+    end
+  end
+
   defp invoice_data(details) do
     %{
       type: :invoice,

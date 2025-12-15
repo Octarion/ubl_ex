@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2025-12-15
+
+### Fixed
+- Division by zero error when generating invoices with 100% discount
+  - Previously: `allowance_charge_xml/1` tried to reverse-calculate base amount from discounted total, causing crash with 100% discount (0 / 0)
+  - Now: Base amount calculated directly as `quantity × price`, which works for any discount percentage including 100%
+
 ## [0.7.0] - 2025-11-25
 
 ### Changed
