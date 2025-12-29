@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2025-12-29
+
+### Fixed
+- VAT rounding error when multiple line items share the same VAT rate
+  - Previously: VAT calculated per line, then summed (e.g., 14.89 + 14.89 + 14.89 = 44.67)
+  - Now: Lines grouped by VAT rate, summed, then VAT calculated once (e.g., (70.92 + 70.92 + 70.92) × 21% = 44.68)
+  - Fixes 1 cent discrepancies in grand totals caused by cumulative rounding errors
+  - Affects both `ubl_totals/1` and `tax_totals/1` functions in `UblEx.Generator.Helpers`
+
 ## [0.7.2] - 2025-12-29
 
 ### Added

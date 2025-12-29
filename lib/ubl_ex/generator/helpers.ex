@@ -133,36 +133,36 @@ defmodule UblEx.Generator.Helpers do
   - BR-CO-10: LineExtensionAmount = Σ InvoiceLine/LineExtensionAmount
   - PEPPOL-EN16931-R120: Line net amounts are correctly calculated
 
+  VAT is calculated by grouping lines with the same VAT rate, summing their totals,
+  then applying VAT to the sum. This prevents rounding errors from accumulating
+  when multiple lines have the same VAT rate.
+
   Returns a map with:
   - `:subtotal` - Sum of all line totals
   - `:vat` - Sum of all VAT amounts
   - `:grand_total` - Subtotal + VAT
   """
   def ubl_totals(details) do
-    line_totals =
-      details
-      |> Enum.map(fn detail ->
-        line_total = ubl_line_total(detail)
-
-        vat_amount =
-          Decimal.mult(line_total, detail.vat)
-          |> Decimal.div(100)
-          |> Decimal.round(2)
-
-        %{line_total: line_total, vat_amount: vat_amount}
-      end)
-
     subtotal =
-      line_totals
-      |> Enum.map(& &1.line_total)
+      details
+      |> Enum.map(&ubl_line_total/1)
       |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
       |> Decimal.round(2)
 
     vat =
-      line_totals
-      |> Enum.map(& &1.vat_amount)
+      details
+      |> Enum.group_by(& &1.vat)
+      |> Enum.map(fn {vat_rate, group_details} ->
+        group_total =
+          group_details
+          |> Enum.map(&ubl_line_total/1)
+          |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
+
+        Decimal.mult(group_total, vat_rate)
+        |> Decimal.div(100)
+        |> Decimal.round(2)
+      end)
       |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
-      |> Decimal.round(2)
 
     grand_total = Decimal.add(subtotal, vat) |> Decimal.round(2)
 
@@ -173,6 +173,7 @@ defmodule UblEx.Generator.Helpers do
   Generate tax totals XML for all tax categories.
 
   Groups details by VAT percentage and tax category, then generates TaxSubtotal elements.
+  VAT is calculated on the grouped subtotal to avoid rounding errors.
   """
   def tax_totals(details) do
     details
@@ -182,7 +183,6 @@ defmodule UblEx.Generator.Helpers do
 
       current =
         Map.get(agg, key, %{
-          vat: Decimal.new(0),
           subtotal: Decimal.new(0),
           tax_category: tax_category,
           tax_exemption_reason_code: Map.get(detail, :tax_exemption_reason_code),
@@ -190,17 +190,26 @@ defmodule UblEx.Generator.Helpers do
         })
 
       total_ex = ubl_line_total(detail)
-      vat_amount = Decimal.mult(total_ex, detail.vat) |> Decimal.div(100) |> Decimal.round(2)
-      subtotal = Decimal.add(current.subtotal, total_ex) |> Decimal.round(2)
-      vat = Decimal.add(current.vat, vat_amount) |> Decimal.round(2)
+      subtotal = Decimal.add(current.subtotal, total_ex)
 
       Map.put(agg, key, %{
-        vat: vat,
         subtotal: subtotal,
         tax_category: tax_category,
         tax_exemption_reason_code: Map.get(detail, :tax_exemption_reason_code),
         tax_exemption_reason: Map.get(detail, :tax_exemption_reason)
       })
+    end)
+    |> Enum.map(fn {key, data} ->
+      {vat_rate, _tax_category} = key
+
+      vat_amount =
+        Decimal.mult(data.subtotal, vat_rate)
+        |> Decimal.div(100)
+        |> Decimal.round(2)
+
+      subtotal = Decimal.round(data.subtotal, 2)
+
+      {key, Map.merge(data, %{vat: vat_amount, subtotal: subtotal})}
     end)
     |> Enum.map(&tax_sub_total/1)
   end
