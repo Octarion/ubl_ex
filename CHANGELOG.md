@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2025-12-29
+
+### Added
+- Parser now extracts monetary totals from UBL documents, eliminating need for users to recalculate:
+  - `tax_amount` - Total tax/VAT amount from TaxTotal element
+  - `line_extension_amount` - Sum of all line totals before tax
+  - `tax_exclusive_amount` - Total amount before tax (after allowances/charges)
+  - `tax_inclusive_amount` - Total amount including tax
+  - `payable_amount` - Final amount to be paid
+  - `allowance_total_amount` - Total discounts/allowances (optional)
+  - `charge_total_amount` - Total additional charges (optional)
+  - `prepaid_amount` - Amount already paid (optional)
+  - All monetary values returned as `Decimal` types for precision
+
+### Changed
+- Updated credo from 1.7.13 to 1.7.15
+- Updated ex_doc from 0.39.1 to 0.39.3
+
 ## [0.7.1] - 2025-12-15
 
 ### Fixed

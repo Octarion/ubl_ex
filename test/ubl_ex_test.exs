@@ -17,6 +17,22 @@ defmodule UblExTest do
       assert is_list(parsed.details)
     end
 
+    test "parses monetary totals from UBL invoice" do
+      xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
+
+      assert {:ok, parsed} = UblEx.parse(xml)
+      assert %Decimal{} = parsed.tax_amount
+      assert %Decimal{} = parsed.line_extension_amount
+      assert %Decimal{} = parsed.tax_exclusive_amount
+      assert %Decimal{} = parsed.tax_inclusive_amount
+      assert %Decimal{} = parsed.payable_amount
+      assert Decimal.eq?(parsed.tax_amount, Decimal.new("2.60"))
+      assert Decimal.eq?(parsed.line_extension_amount, Decimal.new("12.36"))
+      assert Decimal.eq?(parsed.tax_exclusive_amount, Decimal.new("12.36"))
+      assert Decimal.eq?(parsed.tax_inclusive_amount, Decimal.new("14.96"))
+      assert Decimal.eq?(parsed.payable_amount, Decimal.new("14.96"))
+    end
+
     test "parses UBL credit note successfully" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
 

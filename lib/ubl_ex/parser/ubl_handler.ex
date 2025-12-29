@@ -212,6 +212,32 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "PaymentMeans" ->
           %{state | in_payment_means: false}
 
+        # Monetary totals
+        local_name == "TaxAmount" and in_path?(state.path, ["TaxTotal"]) and
+            match?([^local_name, "TaxTotal" | _], state.path) ->
+          put_result(state, :tax_amount, safe_decimal(safe_float(text)))
+
+        local_name == "LineExtensionAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :line_extension_amount, safe_decimal(safe_float(text)))
+
+        local_name == "TaxExclusiveAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :tax_exclusive_amount, safe_decimal(safe_float(text)))
+
+        local_name == "TaxInclusiveAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :tax_inclusive_amount, safe_decimal(safe_float(text)))
+
+        local_name == "AllowanceTotalAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :allowance_total_amount, safe_decimal(safe_float(text)))
+
+        local_name == "ChargeTotalAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :charge_total_amount, safe_decimal(safe_float(text)))
+
+        local_name == "PrepaidAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :prepaid_amount, safe_decimal(safe_float(text)))
+
+        local_name == "PayableAmount" and in_path?(state.path, ["LegalMonetaryTotal"]) ->
+          put_result(state, :payable_amount, safe_decimal(safe_float(text)))
+
         # Party fields
         local_name == "EndpointID" and not is_nil(state.current_party) ->
           {party_type, party_data} = state.current_party
