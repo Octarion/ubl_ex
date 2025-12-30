@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4] - 2025-12-30
+
+### Added
+- Support for `cbc:Note` elements in invoices and credit notes per Peppol BIS 3.0:
+  - Document-level note (0..1) - Optional note at invoice/credit note root level
+  - Line-level note (0..1) - Optional note on individual invoice/credit note lines
+  - Payment terms (0..1) - Optional `cac:PaymentTerms` with required `cbc:Note` describing payment conditions
+- Generator support for all three note types
+- Parser support for extracting all three note types
+- Full round-trip support for notes (parse → generate → parse)
+
 ## [0.7.3] - 2025-12-29
 
 ### Fixed

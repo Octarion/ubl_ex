@@ -151,6 +151,19 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "Note" and match?([^local_name, "ApplicationResponse"], state.path) ->
           put_result(state, :note, text)
 
+        local_name == "Note" and match?([^local_name, "Invoice" | _], state.path) ->
+          put_result(state, :note, text)
+
+        local_name == "Note" and match?([^local_name, "CreditNote" | _], state.path) ->
+          put_result(state, :note, text)
+
+        local_name == "Note" and not is_nil(state.current_line) and
+            (in_path?(state.path, ["InvoiceLine"]) or in_path?(state.path, ["CreditNoteLine"])) ->
+          %{state | current_line: Map.put(state.current_line, :note, text)}
+
+        local_name == "Note" and in_path?(state.path, ["PaymentTerms"]) ->
+          put_result(state, :payment_terms, text)
+
         local_name == "ID" and in_path?(state.path, ["OrderReference"]) ->
           put_result(state, :order_reference, text)
 
@@ -392,6 +405,8 @@ defmodule UblEx.Parser.UblHandler do
   end
 
   defp maybe_add(map, _key, []), do: map
+  defp maybe_add(map, _key, nil), do: map
+  defp maybe_add(map, _key, ""), do: map
   defp maybe_add(map, key, value), do: Map.put(map, key, value)
 
   defp parse_date(date_string) when is_binary(date_string) and date_string != "" do
@@ -435,6 +450,7 @@ defmodule UblEx.Parser.UblHandler do
         vat: safe_decimal(vat_percent),
         discount: discount
       }
+      |> maybe_add(:note, line[:note])
       |> maybe_add_tax_category(tax_category)
 
     %{state | line_items: [completed_line | state.line_items], current_line: nil}

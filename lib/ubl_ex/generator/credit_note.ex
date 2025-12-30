@@ -10,6 +10,7 @@ defmodule UblEx.Generator.CreditNote do
   """
   def generate(document_data) do
     attachments_xml = generate_attachments(document_data)
+    note_xml = generate_note(document_data)
     number = document_data.number
     customer = document_data.customer
     supplier = document_data.supplier
@@ -42,7 +43,7 @@ defmodule UblEx.Generator.CreditNote do
     <cbc:ID>#{number}</cbc:ID>
     <cbc:IssueDate>#{document_data.date}</cbc:IssueDate>
     <cbc:CreditNoteTypeCode>381</cbc:CreditNoteTypeCode>
-    <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+    #{note_xml}<cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
     <cac:OrderReference>
         <cbc:ID>#{order_reference}</cbc:ID>
     </cac:OrderReference>
@@ -109,6 +110,7 @@ defmodule UblEx.Generator.CreditNote do
     </cac:AccountingCustomerParty>
     #{Helpers.delivery_terms(customer, true)}
     #{payment_means(document_data, supplier)}
+    #{payment_terms(document_data)}
     <cac:TaxTotal>
         <cbc:TaxAmount currencyID="EUR">#{Helpers.format(totals.vat)}</cbc:TaxAmount>
         #{Helpers.tax_totals(document_data.details)}
@@ -131,9 +133,18 @@ defmodule UblEx.Generator.CreditNote do
     allowance_charge =
       if Decimal.gt?(detail.discount, 0), do: Helpers.allowance_charge_xml(detail), else: ""
 
+    line_note =
+      case Map.get(detail, :note) do
+        note when is_binary(note) and note != "" ->
+          "\n        <cbc:Note>#{Helpers.escape(note)}</cbc:Note>"
+
+        _ ->
+          ""
+      end
+
     """
     <cac:CreditNoteLine>
-        <cbc:ID>#{line.index}</cbc:ID>
+        <cbc:ID>#{line.index}</cbc:ID>#{line_note}
         <cbc:CreditedQuantity unitCode="NAR">#{detail.quantity}</cbc:CreditedQuantity>
         <cbc:LineExtensionAmount currencyID="EUR">#{Helpers.format(line.total_ex)}</cbc:LineExtensionAmount>#{allowance_charge}
         <cac:Item>
@@ -180,6 +191,16 @@ defmodule UblEx.Generator.CreditNote do
 
   defp generate_attachment_xml(_), do: ""
 
+  defp generate_note(document_data) do
+    case Map.get(document_data, :note) do
+      note when is_binary(note) and note != "" ->
+        "<cbc:Note>#{Helpers.escape(note)}</cbc:Note>\n    "
+
+      _ ->
+        ""
+    end
+  end
+
   defp payment_means(document_data, supplier) do
     payment_id = Map.get(document_data, :payment_id)
     iban = supplier[:iban] || ""
@@ -202,5 +223,19 @@ defmodule UblEx.Generator.CreditNote do
         </cac:PayeeFinancialAccount>
     </cac:PaymentMeans>\
     """
+  end
+
+  defp payment_terms(document_data) do
+    case Map.get(document_data, :payment_terms) do
+      terms when is_binary(terms) and terms != "" ->
+        """
+        <cac:PaymentTerms>
+            <cbc:Note>#{Helpers.escape(terms)}</cbc:Note>
+        </cac:PaymentTerms>\
+        """
+
+      _ ->
+        ""
+    end
   end
 end
