@@ -944,6 +944,146 @@ defmodule UblExTest do
     end
   end
 
+  describe "strip_sbdh/1" do
+    test "strips SBDH wrapper from application response" do
+      xml = File.read!(Path.join(@fixtures_path, "sbdh_application_response.xml"))
+
+      stripped = UblEx.strip_sbdh(xml)
+
+      refute stripped =~ "StandardBusinessDocument"
+      refute stripped =~ "StandardBusinessDocumentHeader"
+      assert stripped =~ "<tns:ApplicationResponse"
+      assert stripped =~ ~r/^<\?xml version="1\.0" encoding="UTF-8"\?>/
+    end
+
+    test "stripped SBDH document can still be parsed" do
+      xml = File.read!(Path.join(@fixtures_path, "sbdh_application_response.xml"))
+
+      stripped = UblEx.strip_sbdh(xml)
+      {:ok, parsed} = UblEx.parse(stripped)
+
+      assert parsed.type == :application_response
+      assert parsed.response_code == "AB"
+      assert parsed.document_reference == "F2025173"
+    end
+
+    test "strips SBDH from generated invoice" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Test",
+          street: "St",
+          city: "City",
+          zipcode: "1000",
+          country: "BE",
+          vat: "BE123",
+          email: "test@test.com"
+        },
+        customer: %{
+          name: "Customer",
+          vat: "BE456",
+          street: "St",
+          housenumber: "1",
+          city: "City",
+          zipcode: "1000",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      sbdh_xml = UblEx.generate_with_sbdh(data)
+      stripped = UblEx.strip_sbdh(sbdh_xml)
+
+      refute stripped =~ "StandardBusinessDocument"
+      assert stripped =~ "<Invoice"
+      assert stripped =~ ~r/^<\?xml version="1\.0" encoding="UTF-8"\?>/
+
+      {:ok, parsed} = UblEx.parse(stripped)
+      assert parsed.type == :invoice
+      assert parsed.number == "F001"
+    end
+
+    test "returns unchanged XML when no SBDH wrapper present" do
+      xml = File.read!(Path.join(@fixtures_path, "ubl_invoice.xml"))
+
+      stripped = UblEx.strip_sbdh(xml)
+
+      assert stripped == xml
+    end
+
+    test "parsed SBDH document equals parsed stripped document" do
+      xml = File.read!(Path.join(@fixtures_path, "sbdh_application_response.xml"))
+
+      {:ok, parsed_with_sbdh} = UblEx.parse(xml)
+
+      stripped = UblEx.strip_sbdh(xml)
+      {:ok, parsed_stripped} = UblEx.parse(stripped)
+
+      assert parsed_with_sbdh == parsed_stripped
+    end
+
+    test "strips SBDH from credit note" do
+      data = %{
+        type: :credit,
+        number: "C001",
+        date: ~D[2024-01-20],
+        billing_references: ["F001"],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Test",
+          street: "St",
+          city: "City",
+          zipcode: "1000",
+          country: "BE",
+          vat: "BE123",
+          email: "test@test.com"
+        },
+        customer: %{
+          name: "Customer",
+          vat: "BE456",
+          street: "St",
+          housenumber: "1",
+          city: "City",
+          zipcode: "1000",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      sbdh_xml = UblEx.generate_with_sbdh(data)
+      stripped = UblEx.strip_sbdh(sbdh_xml)
+
+      refute stripped =~ "StandardBusinessDocument"
+      assert stripped =~ "<CreditNote"
+
+      {:ok, parsed} = UblEx.parse(stripped)
+      assert parsed.type == :credit
+      assert parsed.number == "C001"
+    end
+  end
+
   describe "discounts" do
     test "generates invoice with 100% discount without division by zero" do
       data =

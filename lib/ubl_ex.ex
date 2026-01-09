@@ -210,4 +210,22 @@ defmodule UblEx do
       ubl_xml -> SBDH.wrap(ubl_xml, document_data)
     end
   end
+
+  @doc """
+  Strip the StandardBusinessDocument/StandardBusinessDocumentHeader wrapper from UBL XML.
+
+  Some accounting software cannot process documents with SBDH wrappers. This function
+  extracts the inner UBL document (Invoice, CreditNote, or ApplicationResponse).
+
+  If the XML is not wrapped in an SBDH, it is returned unchanged.
+
+  ## Example
+
+      {:ok, sbdh_xml} = File.read("invoice_with_sbdh.xml")
+      plain_xml = UblEx.strip_sbdh(sbdh_xml)
+  """
+  @spec strip_sbdh(String.t()) :: String.t()
+  def strip_sbdh(xml_content) do
+    SBDH.strip(xml_content)
+  end
 end

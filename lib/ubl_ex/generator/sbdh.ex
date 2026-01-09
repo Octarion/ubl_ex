@@ -126,4 +126,47 @@ defmodule UblEx.Generator.SBDH do
     |> String.replace(~r/^<\?xml[^?]*\?>\s*/, "")
     |> String.trim()
   end
+
+  @doc """
+  Strip the StandardBusinessDocument/StandardBusinessDocumentHeader wrapper from UBL XML.
+
+  Some accounting software cannot process documents with SBDH wrappers. This function
+  extracts the inner UBL document (Invoice, CreditNote, or ApplicationResponse).
+
+  If the XML is not wrapped in an SBDH, it is returned unchanged.
+
+  ## Example
+
+      sbdh_xml = UblEx.generate_with_sbdh(document_data)
+      plain_xml = UblEx.Generator.SBDH.strip(sbdh_xml)
+  """
+  @spec strip(String.t()) :: String.t()
+  def strip(xml) when is_binary(xml) do
+    if String.contains?(xml, "StandardBusinessDocument") do
+      extract_inner_document(xml)
+    else
+      xml
+    end
+  end
+
+  defp extract_inner_document(xml) do
+    document_patterns = [
+      ~r/<([a-z0-9]*:?Invoice\s+xmlns[^>]*>.*<\/[a-z0-9]*:?Invoice>)/s,
+      ~r/<([a-z0-9]*:?CreditNote\s+xmlns[^>]*>.*<\/[a-z0-9]*:?CreditNote>)/s,
+      ~r/<([a-z0-9]*:?ApplicationResponse\s+xmlns[^>]*>.*<\/[a-z0-9]*:?ApplicationResponse>)/s
+    ]
+
+    inner_document =
+      Enum.find_value(document_patterns, fn pattern ->
+        case Regex.run(pattern, xml) do
+          [_, captured] -> captured
+          _ -> nil
+        end
+      end)
+
+    case inner_document do
+      nil -> xml
+      doc -> "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<#{doc}"
+    end
+  end
 end

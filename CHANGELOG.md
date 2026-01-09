@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-01-09
+
+### Added
+- `UblEx.strip_sbdh/1` function to remove StandardBusinessDocument/StandardBusinessDocumentHeader wrapper from UBL XML
+  - Useful for accounting software that cannot process SBDH-wrapped documents
+  - Extracts the inner UBL document (Invoice, CreditNote, or ApplicationResponse)
+  - Returns unchanged XML if no SBDH wrapper is present
+  - Parsed results are identical whether SBDH is present or stripped
+
 ## [0.7.4] - 2025-12-30
 
 ### Added
