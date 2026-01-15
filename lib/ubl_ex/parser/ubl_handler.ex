@@ -20,6 +20,7 @@ defmodule UblEx.Parser.UblHandler do
     :line_items,
     :attachments,
     :billing_refs,
+    :tax_subtotals,
     :tax_exemptions,
     :in_payment_means
   ]
@@ -36,6 +37,7 @@ defmodule UblEx.Parser.UblHandler do
       line_items: [],
       attachments: [],
       billing_refs: [],
+      tax_subtotals: [],
       tax_exemptions: %{},
       in_payment_means: false
     }
@@ -55,6 +57,7 @@ defmodule UblEx.Parser.UblHandler do
       |> maybe_add(:details, Enum.reverse(line_items_with_exemptions))
       |> maybe_add(:attachments, Enum.reverse(state.attachments))
       |> maybe_add(:billing_references, Enum.reverse(state.billing_refs))
+      |> maybe_add(:tax_subtotals, Enum.reverse(state.tax_subtotals))
 
     {:ok, %{state | result: result}}
   end
@@ -199,6 +202,16 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "Percent" and not is_nil(state.current_tax_subtotal) and
             in_path?(state.path, ["TaxSubtotal", "TaxCategory"]) ->
           subtotal = Map.put(state.current_tax_subtotal, :vat_text, text)
+          %{state | current_tax_subtotal: subtotal}
+
+        local_name == "TaxableAmount" and not is_nil(state.current_tax_subtotal) and
+            match?(["TaxableAmount", "TaxSubtotal" | _], state.path) ->
+          subtotal = Map.put(state.current_tax_subtotal, :taxable_amount_text, text)
+          %{state | current_tax_subtotal: subtotal}
+
+        local_name == "TaxAmount" and not is_nil(state.current_tax_subtotal) and
+            match?(["TaxAmount", "TaxSubtotal" | _], state.path) ->
+          subtotal = Map.put(state.current_tax_subtotal, :tax_amount_text, text)
           %{state | current_tax_subtotal: subtotal}
 
         local_name == "TaxSubtotal" and not is_nil(state.current_tax_subtotal) ->
@@ -490,9 +503,22 @@ defmodule UblEx.Parser.UblHandler do
 
   defp finalize_tax_subtotal(state) do
     subtotal = state.current_tax_subtotal
+    vat_percent = safe_float(subtotal[:vat_text])
+
+    new_state =
+      if subtotal[:vat_text] && subtotal[:taxable_amount_text] do
+        completed_subtotal = %{
+          percentage: safe_decimal(vat_percent),
+          taxable_amount: safe_decimal(safe_float(subtotal[:taxable_amount_text])),
+          tax_amount: safe_decimal(safe_float(subtotal[:tax_amount_text]))
+        }
+
+        %{state | tax_subtotals: [completed_subtotal | state.tax_subtotals]}
+      else
+        state
+      end
 
     if subtotal[:tax_category] && subtotal[:vat_text] do
-      vat_percent = safe_float(subtotal[:vat_text])
       key = {vat_percent, subtotal[:tax_category]}
 
       exemption_data = %{
@@ -500,10 +526,10 @@ defmodule UblEx.Parser.UblHandler do
         tax_exemption_reason: subtotal[:tax_exemption_reason]
       }
 
-      new_exemptions = Map.put(state.tax_exemptions, key, exemption_data)
-      %{state | tax_exemptions: new_exemptions, current_tax_subtotal: nil}
+      new_exemptions = Map.put(new_state.tax_exemptions, key, exemption_data)
+      %{new_state | tax_exemptions: new_exemptions, current_tax_subtotal: nil}
     else
-      %{state | current_tax_subtotal: nil}
+      %{new_state | current_tax_subtotal: nil}
     end
   end
 

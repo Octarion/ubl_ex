@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-01-15
+
+### Added
+- `tax_subtotals` field in parsed results exposing VAT breakdown per rate
+  - Each subtotal includes `percentage`, `taxable_amount`, and `tax_amount`
+  - Useful for invoices with multiple VAT rates
+
 ## [0.7.5] - 2026-01-09
 
 ### Added
