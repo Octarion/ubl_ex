@@ -346,10 +346,7 @@ defmodule UblEx.Generator.Helpers do
     <cac:Delivery>
         <cac:DeliveryLocation>
             <cac:Address>
-                <cbc:StreetName>#{escape(customer.street)} #{escape(customer.housenumber)}</cbc:StreetName>
-                <cbc:CityName>#{escape(customer.city)}</cbc:CityName>
-                <cbc:PostalZone>#{customer.zipcode}</cbc:PostalZone>
-                <cac:Country>
+                #{street_name_xml(customer)}#{city_name_xml(customer)}#{postal_zone_xml(customer)}<cac:Country>
                     <cbc:IdentificationCode>#{customer.country}</cbc:IdentificationCode>
                 </cac:Country>
             </cac:Address>
@@ -394,4 +391,114 @@ defmodule UblEx.Generator.Helpers do
   end
 
   def escape(other), do: to_string(other)
+
+  @doc """
+  Format street address with optional house number.
+  """
+  def street_address(party) do
+    case Map.get(party, :street) do
+      street when is_binary(street) and street != "" ->
+        case Map.get(party, :housenumber) do
+          housenumber when is_binary(housenumber) and housenumber != "" ->
+            "#{escape(street)} #{escape(housenumber)}"
+
+          _ ->
+            escape(street)
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  @doc """
+  Generate optional StreetName XML element.
+  """
+  def street_name_xml(party) do
+    case street_address(party) do
+      nil -> ""
+      address -> "<cbc:StreetName>#{address}</cbc:StreetName>\n            "
+    end
+  end
+
+  @doc """
+  Generate optional CityName XML element.
+  """
+  def city_name_xml(party) do
+    case Map.get(party, :city) do
+      city when is_binary(city) and city != "" ->
+        "<cbc:CityName>#{escape(city)}</cbc:CityName>\n            "
+
+      _ ->
+        ""
+    end
+  end
+
+  @doc """
+  Generate optional PostalZone XML element.
+  """
+  def postal_zone_xml(party) do
+    case Map.get(party, :zipcode) do
+      zipcode when is_binary(zipcode) and zipcode != "" ->
+        "<cbc:PostalZone>#{escape(zipcode)}</cbc:PostalZone>\n            "
+
+      _ ->
+        ""
+    end
+  end
+
+  @doc """
+  Generate PostalAddress XML with optional elements.
+  Only Country > IdentificationCode is required.
+  """
+  def postal_address_xml(party) do
+    """
+    <cac:PostalAddress>
+                #{street_name_xml(party)}#{city_name_xml(party)}#{postal_zone_xml(party)}<cac:Country>
+                    <cbc:IdentificationCode>#{party.country}</cbc:IdentificationCode>
+                </cac:Country>
+            </cac:PostalAddress>\
+    """
+  end
+
+  @doc """
+  Generate optional PartyTaxScheme XML element for supplier.
+  """
+  def party_tax_scheme_xml(party) do
+    case Map.get(party, :vat) do
+      vat when is_binary(vat) and vat != "" ->
+        """
+
+                <cac:PartyTaxScheme>
+                    <cbc:CompanyID>#{escape(vat)}</cbc:CompanyID>
+                    <cac:TaxScheme>
+                        <cbc:ID>VAT</cbc:ID>
+                    </cac:TaxScheme>
+                </cac:PartyTaxScheme>\
+        """
+
+      _ ->
+        ""
+    end
+  end
+
+  @doc """
+  Generate PartyLegalEntity XML with optional CompanyID.
+  """
+  def party_legal_entity_xml(party, company_id) do
+    company_id_xml =
+      case company_id do
+        id when is_binary(id) and id != "" ->
+          "\n                <cbc:CompanyID>#{escape(id)}</cbc:CompanyID>"
+
+        _ ->
+          ""
+      end
+
+    """
+    <cac:PartyLegalEntity>
+                <cbc:RegistrationName>#{escape(party.name)}</cbc:RegistrationName>#{company_id_xml}
+            </cac:PartyLegalEntity>\
+    """
+  end
 end

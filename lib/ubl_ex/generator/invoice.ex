@@ -14,7 +14,8 @@ defmodule UblEx.Generator.Invoice do
     number = document_data.number
     customer = document_data.customer
     supplier = document_data.supplier
-    vat_number = Helpers.vat_number(customer.vat)
+    customer_vat = Map.get(customer, :vat)
+    vat_number = Helpers.vat_number(customer_vat)
     customer_endpoint_id = Map.get(customer, :endpoint_id, vat_number)
     customer_scheme = Helpers.party_scheme(customer)
 
@@ -59,27 +60,8 @@ defmodule UblEx.Generator.Invoice do
             <cac:PartyName>
                 <cbc:Name>#{Helpers.escape(supplier.name)}</cbc:Name>
             </cac:PartyName>
-            <cac:PostalAddress>
-                <cbc:StreetName>#{Helpers.escape(supplier.street)}</cbc:StreetName>
-                <cbc:CityName>#{Helpers.escape(supplier.city)}</cbc:CityName>
-                <cbc:PostalZone>#{supplier.zipcode}</cbc:PostalZone>
-                <cac:Country>
-                    <cbc:IdentificationCode>#{supplier.country}</cbc:IdentificationCode>
-                </cac:Country>
-            </cac:PostalAddress>
-            <cac:PartyTaxScheme>
-                <cbc:CompanyID>#{supplier.vat}</cbc:CompanyID>
-                <cac:TaxScheme>
-                    <cbc:ID>VAT</cbc:ID>
-                </cac:TaxScheme>
-            </cac:PartyTaxScheme>
-            <cac:PartyLegalEntity>
-                <cbc:RegistrationName>#{Helpers.escape(supplier.name)}</cbc:RegistrationName>
-                <cbc:CompanyID>#{supplier.endpoint_id}</cbc:CompanyID>
-            </cac:PartyLegalEntity>
-            <cac:Contact>
-                <cbc:ElectronicMail>#{supplier.email}</cbc:ElectronicMail>
-            </cac:Contact>
+            #{Helpers.postal_address_xml(supplier)}#{Helpers.party_tax_scheme_xml(supplier)}
+            #{Helpers.party_legal_entity_xml(supplier, supplier.endpoint_id)}#{contact_xml(supplier)}
         </cac:Party>
     </cac:AccountingSupplierParty>
     <cac:AccountingCustomerParty>
@@ -88,24 +70,8 @@ defmodule UblEx.Generator.Invoice do
             <cac:PartyName>
                 <cbc:Name>#{Helpers.escape(customer.name)}</cbc:Name>
             </cac:PartyName>
-            <cac:PostalAddress>
-                <cbc:StreetName>#{Helpers.escape(customer.street)} #{Helpers.escape(customer.housenumber)}</cbc:StreetName>
-                <cbc:CityName>#{Helpers.escape(customer.city)}</cbc:CityName>
-                <cbc:PostalZone>#{Helpers.escape(customer.zipcode)}</cbc:PostalZone>
-                <cac:Country>
-                    <cbc:IdentificationCode>#{customer.country}</cbc:IdentificationCode>
-                </cac:Country>
-            </cac:PostalAddress>
-            <cac:PartyTaxScheme>
-                <cbc:CompanyID>#{customer.vat}</cbc:CompanyID>
-                <cac:TaxScheme>
-                    <cbc:ID>VAT</cbc:ID>
-                </cac:TaxScheme>
-            </cac:PartyTaxScheme>
-            <cac:PartyLegalEntity>
-                <cbc:RegistrationName>#{Helpers.escape(customer.name)}</cbc:RegistrationName>
-                <cbc:CompanyID>#{vat_number}</cbc:CompanyID>
-            </cac:PartyLegalEntity>
+            #{Helpers.postal_address_xml(customer)}#{Helpers.party_tax_scheme_xml(customer)}
+            #{Helpers.party_legal_entity_xml(customer, vat_number)}
         </cac:Party>
     </cac:AccountingCustomerParty>
     #{Helpers.delivery_terms(customer, false)}
@@ -232,6 +198,21 @@ defmodule UblEx.Generator.Invoice do
         <cac:PaymentTerms>
             <cbc:Note>#{Helpers.escape(terms)}</cbc:Note>
         </cac:PaymentTerms>\
+        """
+
+      _ ->
+        ""
+    end
+  end
+
+  defp contact_xml(supplier) do
+    case Map.get(supplier, :email) do
+      email when is_binary(email) and email != "" ->
+        """
+
+                <cac:Contact>
+                    <cbc:ElectronicMail>#{Helpers.escape(email)}</cbc:ElectronicMail>
+                </cac:Contact>\
         """
 
       _ ->

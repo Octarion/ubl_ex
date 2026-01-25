@@ -1146,6 +1146,290 @@ defmodule UblExTest do
     end
   end
 
+  describe "optional fields" do
+    test "generates invoice with minimal supplier data" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Minimal Supplier",
+          country: "BE"
+        },
+        customer: %{
+          name: "Test Customer",
+          vat: "BE0456789012",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:Name>Minimal Supplier</cbc:Name>"
+      assert xml =~ "<cbc:IdentificationCode>BE</cbc:IdentificationCode>"
+      refute xml =~ "<cbc:StreetName>"
+      refute xml =~ "<cbc:CityName>"
+      refute xml =~ "<cbc:PostalZone>"
+      refute xml =~ "<cac:Contact>"
+    end
+
+    test "generates invoice with minimal customer data" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Test Supplier",
+          country: "BE"
+        },
+        customer: %{
+          name: "Minimal Customer",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:Name>Minimal Customer</cbc:Name>"
+
+      customer_section =
+        xml
+        |> String.split("<cac:AccountingCustomerParty>")
+        |> Enum.at(1)
+        |> String.split("</cac:AccountingCustomerParty>")
+        |> hd()
+
+      refute customer_section =~ "<cbc:StreetName>"
+      refute customer_section =~ "<cbc:CityName>"
+      refute customer_section =~ "<cbc:PostalZone>"
+    end
+
+    test "generates invoice without supplier VAT when not provided" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "No VAT Supplier",
+          country: "BE"
+        },
+        customer: %{
+          name: "Customer",
+          vat: "BE0456789012",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      supplier_section =
+        xml
+        |> String.split("<cac:AccountingSupplierParty>")
+        |> Enum.at(1)
+        |> String.split("</cac:AccountingSupplierParty>")
+        |> hd()
+
+      refute supplier_section =~ "<cac:PartyTaxScheme>"
+    end
+
+    test "generates invoice without customer VAT when not provided" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Test Supplier",
+          vat: "BE0797948229",
+          country: "BE"
+        },
+        customer: %{
+          name: "No VAT Customer",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      customer_section =
+        xml
+        |> String.split("<cac:AccountingCustomerParty>")
+        |> Enum.at(1)
+        |> String.split("</cac:AccountingCustomerParty>")
+        |> hd()
+
+      refute customer_section =~ "<cac:PartyTaxScheme>"
+    end
+
+    test "generates credit note with minimal data" do
+      data = %{
+        type: :credit,
+        number: "C001",
+        date: ~D[2024-01-20],
+        billing_references: ["F001"],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Minimal Supplier",
+          country: "BE"
+        },
+        customer: %{
+          name: "Minimal Customer",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<CreditNote"
+      assert xml =~ "<cbc:Name>Minimal Supplier</cbc:Name>"
+      assert xml =~ "<cbc:Name>Minimal Customer</cbc:Name>"
+      refute xml =~ "<cbc:StreetName>"
+      refute xml =~ "<cbc:CityName>"
+      refute xml =~ "<cbc:PostalZone>"
+    end
+
+    test "includes optional fields when provided" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Full Supplier",
+          street: "Supplier Street",
+          city: "Supplier City",
+          zipcode: "1000",
+          country: "BE",
+          vat: "BE0797948229",
+          email: "supplier@test.com"
+        },
+        customer: %{
+          name: "Full Customer",
+          street: "Customer Street",
+          housenumber: "42",
+          city: "Customer City",
+          zipcode: "2000",
+          country: "BE",
+          vat: "BE0456789012"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:StreetName>Supplier Street</cbc:StreetName>"
+      assert xml =~ "<cbc:CityName>Supplier City</cbc:CityName>"
+      assert xml =~ "<cbc:PostalZone>1000</cbc:PostalZone>"
+      assert xml =~ "<cbc:ElectronicMail>supplier@test.com</cbc:ElectronicMail>"
+      assert xml =~ "<cbc:StreetName>Customer Street 42</cbc:StreetName>"
+      assert xml =~ "<cbc:CityName>Customer City</cbc:CityName>"
+      assert xml =~ "<cbc:PostalZone>2000</cbc:PostalZone>"
+    end
+
+    test "minimal invoice round-trip preserves data" do
+      data = %{
+        type: :invoice,
+        number: "F001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Minimal Supplier",
+          country: "BE"
+        },
+        customer: %{
+          name: "Minimal Customer",
+          country: "BE"
+        },
+        details: [
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      assert parsed.type == :invoice
+      assert parsed.number == "F001"
+      assert parsed.supplier.name == "Minimal Supplier"
+      assert parsed.customer.name == "Minimal Customer"
+    end
+  end
+
   defp invoice_data(details) do
     %{
       type: :invoice,

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-01-25
+
+### Changed
+- Made optional fields truly optional per Peppol BIS 3.0 specification:
+  - Supplier: `street`, `city`, `zipcode`, `vat`, `email` are now optional
+  - Customer: `street`, `housenumber`, `city`, `zipcode`, `vat` are now optional
+  - Only `endpoint_id`, `name`, and `country` are required for parties
+
 ## [0.7.6] - 2026-01-15
 
 ### Added
