@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-02-17
+
+### Fixed
+- Item name incorrectly overwritten by `AdditionalItemProperty` name during parsing
+  - Previously: `<cbc:Name>` inside `<cac:AdditionalItemProperty>` matched the item name rule because `in_path?` found `"Item"` anywhere in the XML path ancestry
+  - Now: Uses `match?/2` to ensure `Name` is a direct child of `Item`, ignoring nested elements like `AdditionalItemProperty`
+  - Example: An invoice line with item name "IPHONE 17 BLACK 256GB" and an `AdditionalItemProperty` named "TaxAmount" would incorrectly parse the item name as "TaxAmount"
+
 ## [0.7.7] - 2026-01-25
 
 ### Changed

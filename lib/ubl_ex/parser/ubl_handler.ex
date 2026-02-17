@@ -326,7 +326,8 @@ defmodule UblEx.Parser.UblHandler do
           %{state | result: Map.put(state.result, party_type, clean_party), current_party: nil}
 
         # Line items
-        local_name == "Name" and not is_nil(state.current_line) and in_path?(state.path, ["Item"]) ->
+        local_name == "Name" and not is_nil(state.current_line) and
+            match?(["Name", "Item" | _], state.path) ->
           %{state | current_line: Map.put(state.current_line, :name, text)}
 
         local_name == "InvoicedQuantity" and not is_nil(state.current_line) ->
