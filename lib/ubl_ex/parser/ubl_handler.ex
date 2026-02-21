@@ -225,7 +225,8 @@ defmodule UblEx.Parser.UblHandler do
           put_result(state, :payment_id, text)
 
         local_name == "ID" and state.in_payment_means and
-            in_path?(state.path, ["PayeeFinancialAccount"]) ->
+          in_path?(state.path, ["PayeeFinancialAccount"]) and
+            not in_path?(state.path, ["FinancialInstitutionBranch"]) ->
           supplier = state.result[:supplier]
 
           if supplier do

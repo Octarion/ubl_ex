@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-02-21
+
+### Fixed
+- IBAN overwritten by BIC/SWIFT code when `FinancialInstitutionBranch` is present inside `PayeeFinancialAccount`
+  - Previously: `<cbc:ID>` inside `<cac:FinancialInstitutionBranch>` matched the IBAN extraction rule because `in_path?` only checked for `PayeeFinancialAccount` anywhere in the path
+  - Now: Excludes `FinancialInstitutionBranch` from the match so only the direct `<cbc:ID>` under `PayeeFinancialAccount` is captured as the IBAN
+
 ## [0.7.8] - 2026-02-17
 
 ### Fixed
