@@ -112,7 +112,15 @@ defmodule UblEx.Parser.UblHandler do
 
         local_name == "EmbeddedDocumentBinaryObject" and not is_nil(state.current_attachment) ->
           mime = get_attribute(attributes, "mimeCode")
-          attachment = state.current_attachment |> Map.put(:mime_type, mime)
+          fname = get_attribute(attributes, "filename")
+
+          attachment =
+            state.current_attachment
+            |> Map.put(:mime_type, mime)
+            |> then(fn att ->
+              if fname, do: Map.put(att, :filename, fname), else: att
+            end)
+
           %{new_state | current_attachment: attachment}
 
         true ->
@@ -351,19 +359,19 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "InvoiceLine" or local_name == "CreditNoteLine" ->
           finalize_line_item(state)
 
-        # Attachments
         local_name == "ID" and not is_nil(state.current_attachment) ->
-          attachment = state.current_attachment |> Map.put(:filename, text)
+          attachment = Map.put(state.current_attachment, :id, text)
           %{state | current_attachment: attachment}
 
         local_name == "EmbeddedDocumentBinaryObject" and not is_nil(state.current_attachment) ->
-          attachment = state.current_attachment |> Map.put(:data, text)
+          attachment = Map.put(state.current_attachment, :data, text)
           %{state | current_attachment: attachment}
 
         local_name == "AdditionalDocumentReference" and not is_nil(state.current_attachment) ->
           attachment = state.current_attachment
 
           if attachment[:data] && attachment[:data] != "" do
+            attachment = Map.put_new(attachment, :filename, attachment[:id])
             %{state | attachments: [attachment | state.attachments], current_attachment: nil}
           else
             %{state | current_attachment: nil}

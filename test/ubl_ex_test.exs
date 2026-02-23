@@ -108,6 +108,102 @@ defmodule UblExTest do
       assert String.length(attachment.data) > 0
     end
 
+    test "parses attachment id from AdditionalDocumentReference ID" do
+      xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
+      {:ok, parsed} = UblEx.parse(xml)
+
+      attachment = hd(parsed.attachments)
+      assert attachment.id == "C2025006.pdf"
+    end
+
+    test "parses filename from EmbeddedDocumentBinaryObject filename attribute" do
+      xml = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+               xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+               xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+        <cbc:ID>TEST-001</cbc:ID>
+        <cbc:IssueDate>2026-02-23</cbc:IssueDate>
+        <cbc:DueDate>2026-03-23</cbc:DueDate>
+        <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+        <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+        <cac:AdditionalDocumentReference>
+          <cbc:ID>2026-0183-InvoicePDF</cbc:ID>
+          <cac:Attachment>
+            <cbc:EmbeddedDocumentBinaryObject filename="Digiteal SA-2026-0183.pdf" mimeCode="application/pdf">dGVzdA==</cbc:EmbeddedDocumentBinaryObject>
+          </cac:Attachment>
+        </cac:AdditionalDocumentReference>
+        <cac:AccountingSupplierParty>
+          <cac:Party>
+            <cac:PartyLegalEntity><cbc:RegistrationName>Test</cbc:RegistrationName></cac:PartyLegalEntity>
+          </cac:Party>
+        </cac:AccountingSupplierParty>
+        <cac:AccountingCustomerParty>
+          <cac:Party>
+            <cac:PartyLegalEntity><cbc:RegistrationName>Customer</cbc:RegistrationName></cac:PartyLegalEntity>
+          </cac:Party>
+        </cac:AccountingCustomerParty>
+        <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">0</cbc:TaxAmount></cac:TaxTotal>
+        <cac:LegalMonetaryTotal>
+          <cbc:TaxExclusiveAmount currencyID="EUR">100</cbc:TaxExclusiveAmount>
+          <cbc:TaxInclusiveAmount currencyID="EUR">100</cbc:TaxInclusiveAmount>
+          <cbc:PayableAmount currencyID="EUR">100</cbc:PayableAmount>
+        </cac:LegalMonetaryTotal>
+      </Invoice>
+      """
+
+      {:ok, parsed} = UblEx.parse(xml)
+
+      attachment = hd(parsed.attachments)
+      assert attachment.id == "2026-0183-InvoicePDF"
+      assert attachment.filename == "Digiteal SA-2026-0183.pdf"
+      assert attachment.mime_type == "application/pdf"
+      assert attachment.data == "dGVzdA=="
+    end
+
+    test "falls back to id as filename when no filename attribute" do
+      xml = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+               xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+               xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+        <cbc:ID>TEST-001</cbc:ID>
+        <cbc:IssueDate>2026-02-23</cbc:IssueDate>
+        <cbc:DueDate>2026-03-23</cbc:DueDate>
+        <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+        <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+        <cac:AdditionalDocumentReference>
+          <cbc:ID>invoice.pdf</cbc:ID>
+          <cac:Attachment>
+            <cbc:EmbeddedDocumentBinaryObject mimeCode="application/pdf">dGVzdA==</cbc:EmbeddedDocumentBinaryObject>
+          </cac:Attachment>
+        </cac:AdditionalDocumentReference>
+        <cac:AccountingSupplierParty>
+          <cac:Party>
+            <cac:PartyLegalEntity><cbc:RegistrationName>Test</cbc:RegistrationName></cac:PartyLegalEntity>
+          </cac:Party>
+        </cac:AccountingSupplierParty>
+        <cac:AccountingCustomerParty>
+          <cac:Party>
+            <cac:PartyLegalEntity><cbc:RegistrationName>Customer</cbc:RegistrationName></cac:PartyLegalEntity>
+          </cac:Party>
+        </cac:AccountingCustomerParty>
+        <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">0</cbc:TaxAmount></cac:TaxTotal>
+        <cac:LegalMonetaryTotal>
+          <cbc:TaxExclusiveAmount currencyID="EUR">100</cbc:TaxExclusiveAmount>
+          <cbc:TaxInclusiveAmount currencyID="EUR">100</cbc:TaxInclusiveAmount>
+          <cbc:PayableAmount currencyID="EUR">100</cbc:PayableAmount>
+        </cac:LegalMonetaryTotal>
+      </Invoice>
+      """
+
+      {:ok, parsed} = UblEx.parse(xml)
+
+      attachment = hd(parsed.attachments)
+      assert attachment.id == "invoice.pdf"
+      assert attachment.filename == "invoice.pdf"
+    end
+
     test "generates XML with multiple attachments" do
       data = %{
         type: :invoice,
@@ -156,25 +252,98 @@ defmodule UblExTest do
       assert xml =~ "base64data2"
     end
 
+    test "generates XML with separate id and filename" do
+      data =
+        invoice_data([
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+        |> Map.put(:attachments, [
+          %{
+            id: "2026-0183-InvoicePDF",
+            filename: "Digiteal SA-2026-0183.pdf",
+            mime_type: "application/pdf",
+            data: "base64data"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>2026-0183-InvoicePDF</cbc:ID>"
+      assert xml =~ ~s(filename="Digiteal SA-2026-0183.pdf")
+    end
+
+    test "generates XML using filename as ID when no id provided" do
+      data =
+        invoice_data([
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+        |> Map.put(:attachments, [
+          %{filename: "invoice.pdf", mime_type: "application/pdf", data: "base64data"}
+        ])
+
+      xml = UblEx.generate(data)
+      assert xml =~ "<cbc:ID>invoice.pdf</cbc:ID>"
+      assert xml =~ ~s(filename="invoice.pdf")
+    end
+
     test "attachment round-trip preserves data" do
       xml = File.read!(Path.join(@fixtures_path, "ubl_creditnote.xml"))
       {:ok, parsed1} = UblEx.parse(xml)
 
-      # Should have attachments
       assert length(parsed1.attachments) > 0
       original_attachment = hd(parsed1.attachments)
 
-      # Generate and reparse
       generated_xml = UblEx.generate(parsed1)
       {:ok, parsed2} = UblEx.parse(generated_xml)
 
-      # Verify attachment preserved
       assert length(parsed2.attachments) == length(parsed1.attachments)
       reparsed_attachment = hd(parsed2.attachments)
 
+      assert reparsed_attachment.id == original_attachment.id
       assert reparsed_attachment.filename == original_attachment.filename
       assert reparsed_attachment.mime_type == original_attachment.mime_type
       assert reparsed_attachment.data == original_attachment.data
+    end
+
+    test "attachment with separate id and filename round-trip" do
+      data =
+        invoice_data([
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+        |> Map.put(:attachments, [
+          %{
+            id: "REF-001",
+            filename: "document.pdf",
+            mime_type: "application/pdf",
+            data: "base64data"
+          }
+        ])
+
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      attachment = hd(parsed.attachments)
+      assert attachment.id == "REF-001"
+      assert attachment.filename == "document.pdf"
+      assert attachment.mime_type == "application/pdf"
+      assert attachment.data == "base64data"
     end
   end
 

@@ -142,11 +142,15 @@ defmodule UblEx.Generator.Invoice do
     end
   end
 
-  defp generate_attachment_xml(%{filename: filename, mime_type: mime_type, data: data})
+  defp generate_attachment_xml(
+         %{filename: filename, mime_type: mime_type, data: data} = attachment
+       )
        when is_binary(data) do
+    id = Map.get(attachment, :id, filename)
+
     """
     <cac:AdditionalDocumentReference>
-        <cbc:ID>#{Helpers.escape(filename)}</cbc:ID>
+        <cbc:ID>#{Helpers.escape(id)}</cbc:ID>
         <cbc:DocumentDescription>Attachment</cbc:DocumentDescription>
         <cac:Attachment>
             <cbc:EmbeddedDocumentBinaryObject mimeCode="#{mime_type}" filename="#{Helpers.escape(filename)}">#{data}</cbc:EmbeddedDocumentBinaryObject>

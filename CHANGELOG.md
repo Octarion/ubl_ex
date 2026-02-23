@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-02-23
+
+### Changed
+- **BREAKING:** Attachment parsing now returns separate `:id` and `:filename` fields
+  - Previously: `<cbc:ID>` from `AdditionalDocumentReference` was stored as `:filename`
+  - Now: `<cbc:ID>` is stored as `:id`, and the `filename` attribute from `EmbeddedDocumentBinaryObject` is stored as `:filename`
+  - If no `filename` attribute exists, `:filename` falls back to the `:id` value
+  - Migration: Code accessing `attachment.filename` to get the document reference ID should use `attachment.id` instead
+- Generator now uses `:id` for the `<cbc:ID>` element, falling back to `:filename` when no `:id` is provided
+
 ## [0.7.9] - 2026-02-21
 
 ### Fixed
