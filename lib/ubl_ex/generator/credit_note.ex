@@ -184,14 +184,36 @@ defmodule UblEx.Generator.CreditNote do
     payment_id_xml =
       if payment_id, do: "<cbc:PaymentID>#{Helpers.escape(payment_id)}</cbc:PaymentID>", else: ""
 
+    account_xml = payment_account_xml(payment_means_code, document_data, iban)
+
     """
     <cac:PaymentMeans>
         <cbc:PaymentMeansCode>#{payment_means_code}</cbc:PaymentMeansCode>
         #{payment_id_xml}
-        <cac:PayeeFinancialAccount>
-            <cbc:ID>#{Helpers.escape(iban)}</cbc:ID>
-        </cac:PayeeFinancialAccount>
+        #{account_xml}
     </cac:PaymentMeans>\
+    """
+  end
+
+  defp payment_account_xml("59", document_data, _iban) do
+    mandate_id = Map.get(document_data, :mandate_id, "")
+    debtor_iban = Map.get(document_data, :debtor_iban, "")
+
+    """
+    <cac:PaymentMandate>
+            <cbc:ID>#{Helpers.escape(mandate_id)}</cbc:ID>
+            <cac:PayerFinancialAccount>
+                <cbc:ID>#{Helpers.escape(debtor_iban)}</cbc:ID>
+            </cac:PayerFinancialAccount>
+        </cac:PaymentMandate>\
+    """
+  end
+
+  defp payment_account_xml(_code, _document_data, iban) do
+    """
+    <cac:PayeeFinancialAccount>
+            <cbc:ID>#{Helpers.escape(iban)}</cbc:ID>
+        </cac:PayeeFinancialAccount>\
     """
   end
 

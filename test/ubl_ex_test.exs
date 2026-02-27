@@ -1735,6 +1735,111 @@ defmodule UblExTest do
     end
   end
 
+  describe "SEPA direct debit (PaymentMeansCode 59)" do
+    test "generates invoice with PaymentMandate instead of PayeeFinancialAccount" do
+      data =
+        invoice_data([
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+        |> Map.merge(%{
+          payment_means_code: "59",
+          payment_id: "+++000/2024/00186+++",
+          mandate_id: "MANDATE-001",
+          debtor_iban: "DE89370400440532013000"
+        })
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:PaymentMeansCode>59</cbc:PaymentMeansCode>"
+      assert xml =~ "<cac:PaymentMandate>"
+      assert xml =~ "<cbc:ID>MANDATE-001</cbc:ID>"
+      assert xml =~ "<cac:PayerFinancialAccount>"
+      assert xml =~ "<cbc:ID>DE89370400440532013000</cbc:ID>"
+      refute xml =~ "<cac:PayeeFinancialAccount>"
+    end
+
+    test "generates credit note with PaymentMandate for code 59" do
+      data = %{
+        type: :credit,
+        number: "CN001",
+        date: ~D[2024-01-15],
+        expires: ~D[2024-02-14],
+        billing_references: ["F001"],
+        supplier: %{
+          endpoint_id: "0797948229",
+          scheme: "0208",
+          name: "Test Supplier",
+          street: "Test Street",
+          city: "Test City",
+          zipcode: "1000",
+          country: "BE",
+          vat: "BE0797948229",
+          email: "test@test.com"
+        },
+        customer: %{
+          name: "Test Customer",
+          vat: "BE0456789012",
+          street: "Customer Street",
+          housenumber: "1",
+          city: "Customer City",
+          zipcode: "2000",
+          country: "BE"
+        },
+        payment_means_code: "59",
+        mandate_id: "MANDATE-002",
+        debtor_iban: "BE68539007547034",
+        details: [
+          %{
+            name: "Refund",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("50"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ]
+      }
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:PaymentMeansCode>59</cbc:PaymentMeansCode>"
+      assert xml =~ "<cac:PaymentMandate>"
+      assert xml =~ "<cbc:ID>MANDATE-002</cbc:ID>"
+      assert xml =~ "<cac:PayerFinancialAccount>"
+      assert xml =~ "<cbc:ID>BE68539007547034</cbc:ID>"
+      refute xml =~ "<cac:PayeeFinancialAccount>"
+    end
+
+    test "non-59 code still generates PayeeFinancialAccount" do
+      data =
+        invoice_data([
+          %{
+            name: "Service",
+            quantity: Decimal.new("1"),
+            price: Decimal.new("100"),
+            vat: Decimal.new("21"),
+            discount: Decimal.new("0")
+          }
+        ])
+        |> Map.merge(%{
+          payment_means_code: "58",
+          mandate_id: "MANDATE-001",
+          debtor_iban: "DE89370400440532013000"
+        })
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>"
+      assert xml =~ "<cac:PayeeFinancialAccount>"
+      refute xml =~ "<cac:PaymentMandate>"
+    end
+  end
+
   defp invoice_data(details) do
     %{
       type: :invoice,
