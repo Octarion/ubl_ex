@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-02-27
+
+### Added
+- SEPA direct debit support (PaymentMeansCode `59`) with `PaymentMandate` in invoice and credit note generators
+  - When `payment_means_code` is `"59"`, generates `<cac:PaymentMandate>` with mandate reference and debtor IBAN instead of `<cac:PayeeFinancialAccount>`
+  - New input fields: `mandate_id` and `debtor_iban`
+
 ## [0.8.0] - 2026-02-23
 
 ### Changed
