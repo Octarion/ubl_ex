@@ -108,11 +108,13 @@ defmodule UblEx.Generator.Invoice do
           ""
       end
 
+    order_line_ref = Helpers.order_line_reference_xml(detail)
+
     """
     <cac:InvoiceLine>
         <cbc:ID>#{line.index}</cbc:ID>#{line_note}
         <cbc:InvoicedQuantity unitCode="NAR">#{detail.quantity}</cbc:InvoicedQuantity>
-        <cbc:LineExtensionAmount currencyID="EUR">#{Helpers.format(line.total_ex)}</cbc:LineExtensionAmount>#{allowance_charge}
+        <cbc:LineExtensionAmount currencyID="EUR">#{Helpers.format(line.total_ex)}</cbc:LineExtensionAmount>#{allowance_charge}#{order_line_ref}
         <cac:Item>
             <cbc:Description>#{Helpers.escape(detail.name)}</cbc:Description>
             <cbc:Name>#{Helpers.escape(detail.name)}</cbc:Name>

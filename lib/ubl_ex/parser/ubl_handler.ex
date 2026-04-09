@@ -175,7 +175,20 @@ defmodule UblEx.Parser.UblHandler do
         local_name == "Note" and in_path?(state.path, ["PaymentTerms"]) ->
           put_result(state, :payment_terms, text)
 
-        local_name == "ID" and in_path?(state.path, ["OrderReference"]) ->
+        local_name == "LineID" and not is_nil(state.current_line) and
+            in_path?(state.path, ["OrderLineReference"]) ->
+          current_ref = Map.get(state.current_line, :order_line_reference, %{})
+          updated_ref = Map.put(current_ref, :line_id, text)
+          %{state | current_line: Map.put(state.current_line, :order_line_reference, updated_ref)}
+
+        local_name == "ID" and not is_nil(state.current_line) and
+            match?(["ID", "OrderReference", "OrderLineReference" | _], state.path) ->
+          current_ref = Map.get(state.current_line, :order_line_reference, %{})
+          updated_ref = Map.put(current_ref, :order_reference, text)
+          %{state | current_line: Map.put(state.current_line, :order_line_reference, updated_ref)}
+
+        local_name == "ID" and in_path?(state.path, ["OrderReference"]) and
+            not in_path?(state.path, ["OrderLineReference"]) ->
           put_result(state, :order_reference, text)
 
         local_name == "ID" and
@@ -474,6 +487,7 @@ defmodule UblEx.Parser.UblHandler do
         discount: discount
       }
       |> maybe_add(:note, line[:note])
+      |> maybe_add(:order_line_reference, line[:order_line_reference])
       |> maybe_add_tax_category(tax_category)
 
     %{state | line_items: [completed_line | state.line_items], current_line: nil}

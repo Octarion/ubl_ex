@@ -108,11 +108,13 @@ defmodule UblEx.Generator.CreditNote do
           ""
       end
 
+    order_line_ref = Helpers.order_line_reference_xml(detail)
+
     """
     <cac:CreditNoteLine>
         <cbc:ID>#{line.index}</cbc:ID>#{line_note}
         <cbc:CreditedQuantity unitCode="NAR">#{detail.quantity}</cbc:CreditedQuantity>
-        <cbc:LineExtensionAmount currencyID="EUR">#{Helpers.format(line.total_ex)}</cbc:LineExtensionAmount>#{allowance_charge}
+        <cbc:LineExtensionAmount currencyID="EUR">#{Helpers.format(line.total_ex)}</cbc:LineExtensionAmount>#{allowance_charge}#{order_line_ref}
         <cac:Item>
             <cbc:Description>#{Helpers.escape(detail.name)}</cbc:Description>
             <cbc:Name>#{Helpers.escape(detail.name)}</cbc:Name>

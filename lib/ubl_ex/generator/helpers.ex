@@ -296,6 +296,31 @@ defmodule UblEx.Generator.Helpers do
   @doc """
   Generate AllowanceCharge XML for a detail with discount.
   """
+  def order_line_reference_xml(%{order_line_reference: %{line_id: line_id} = ref}) do
+    order_ref =
+      case Map.get(ref, :order_reference) do
+        id when is_binary(id) and id != "" ->
+          """
+
+                  <cac:OrderReference>
+                      <cbc:ID>#{escape(id)}</cbc:ID>
+                  </cac:OrderReference>\
+          """
+
+        _ ->
+          ""
+      end
+
+    """
+
+        <cac:OrderLineReference>
+            <cbc:LineID>#{escape(to_string(line_id))}</cbc:LineID>#{order_ref}
+        </cac:OrderLineReference>\
+    """
+  end
+
+  def order_line_reference_xml(_), do: ""
+
   def allowance_charge_xml(detail) do
     if Decimal.gt?(detail.discount, 0) do
       base_amount = Decimal.mult(detail.quantity, detail.price) |> Decimal.round(2)

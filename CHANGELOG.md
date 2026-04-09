@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-04-09
+
+### Added
+- `OrderLineReference` support on individual invoice and credit note lines
+  - New optional `order_line_reference` field on line details with `line_id` (required) and `order_reference` (optional)
+  - Generates `<cac:OrderLineReference>` with `<cbc:LineID>` and optional nested `<cac:OrderReference>`
+  - Parser extracts `OrderLineReference` data from incoming UBL documents
+
 ## [0.8.1] - 2026-02-27
 
 ### Added

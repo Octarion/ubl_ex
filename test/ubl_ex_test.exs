@@ -1840,6 +1840,119 @@ defmodule UblExTest do
     end
   end
 
+  describe "OrderLineReference" do
+    test "generates invoice with order_line_reference on line" do
+      details = [
+        %{
+          name: "Widget",
+          quantity: Decimal.new("2"),
+          price: Decimal.new("50"),
+          vat: Decimal.new("21"),
+          discount: Decimal.new("0"),
+          order_line_reference: %{line_id: "3", order_reference: "PO-2026-001"}
+        }
+      ]
+
+      xml = UblEx.generate(invoice_data(details))
+
+      assert xml =~ "<cac:OrderLineReference>"
+      assert xml =~ "<cbc:LineID>3</cbc:LineID>"
+      assert xml =~ "<cbc:ID>PO-2026-001</cbc:ID>"
+    end
+
+    test "generates invoice with order_line_reference without order_reference" do
+      details = [
+        %{
+          name: "Widget",
+          quantity: Decimal.new("2"),
+          price: Decimal.new("50"),
+          vat: Decimal.new("21"),
+          discount: Decimal.new("0"),
+          order_line_reference: %{line_id: "5"}
+        }
+      ]
+
+      xml = UblEx.generate(invoice_data(details))
+
+      assert xml =~ "<cac:OrderLineReference>"
+      assert xml =~ "<cbc:LineID>5</cbc:LineID>"
+
+      refute xml =~
+               "<cac:OrderLineReference>" <>
+                 ~s(\n) <>
+                 "            <cbc:LineID>5</cbc:LineID>" <>
+                 ~s(\n) <> "            <cac:OrderReference>"
+    end
+
+    test "does not generate OrderLineReference when absent" do
+      details = [
+        %{
+          name: "Widget",
+          quantity: Decimal.new("2"),
+          price: Decimal.new("50"),
+          vat: Decimal.new("21"),
+          discount: Decimal.new("0")
+        }
+      ]
+
+      xml = UblEx.generate(invoice_data(details))
+
+      refute xml =~ "OrderLineReference"
+    end
+
+    test "generates credit note with order_line_reference on line" do
+      details = [
+        %{
+          name: "Widget",
+          quantity: Decimal.new("2"),
+          price: Decimal.new("50"),
+          vat: Decimal.new("21"),
+          discount: Decimal.new("0"),
+          order_line_reference: %{line_id: "1", order_reference: "PO-999"}
+        }
+      ]
+
+      data =
+        invoice_data(details)
+        |> Map.put(:type, :credit)
+        |> Map.put(:billing_references, ["INV-001"])
+
+      xml = UblEx.generate(data)
+
+      assert xml =~ "<cac:OrderLineReference>"
+      assert xml =~ "<cbc:LineID>1</cbc:LineID>"
+      assert xml =~ "<cbc:ID>PO-999</cbc:ID>"
+    end
+
+    test "order_line_reference round-trip" do
+      details = [
+        %{
+          name: "Widget A",
+          quantity: Decimal.new("2"),
+          price: Decimal.new("50"),
+          vat: Decimal.new("21"),
+          discount: Decimal.new("0"),
+          order_line_reference: %{line_id: "3", order_reference: "PO-2026-001"}
+        },
+        %{
+          name: "Widget B",
+          quantity: Decimal.new("1"),
+          price: Decimal.new("100"),
+          vat: Decimal.new("21"),
+          discount: Decimal.new("0")
+        }
+      ]
+
+      data = invoice_data(details)
+      xml = UblEx.generate(data)
+      {:ok, parsed} = UblEx.parse(xml)
+
+      [line_a, line_b] = parsed.details
+      assert line_a.order_line_reference == %{line_id: "3", order_reference: "PO-2026-001"}
+      assert Map.get(line_b, :order_line_reference) == nil
+    end
+  end
+
   defp invoice_data(details) do
     %{
       type: :invoice,
