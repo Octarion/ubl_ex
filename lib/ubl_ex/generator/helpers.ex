@@ -116,10 +116,12 @@ defmodule UblEx.Generator.Helpers do
   """
   def ubl_line_total(detail) do
     if Decimal.gt?(detail.discount, 0) do
-      base_amount = Decimal.mult(detail.quantity, detail.price) |> Decimal.round(2)
-      multiplier = Decimal.div(detail.discount, 100)
-      allowance = Decimal.mult(base_amount, multiplier) |> Decimal.round(2)
-      Decimal.sub(base_amount, allowance) |> Decimal.round(2)
+      factor = Decimal.sub(1, Decimal.div(detail.discount, 100))
+
+      detail.quantity
+      |> Decimal.mult(detail.price)
+      |> Decimal.mult(factor)
+      |> Decimal.round(2)
     else
       Decimal.mult(detail.quantity, detail.price) |> Decimal.round(2)
     end
@@ -324,9 +326,8 @@ defmodule UblEx.Generator.Helpers do
   def allowance_charge_xml(detail) do
     if Decimal.gt?(detail.discount, 0) do
       base_amount = Decimal.mult(detail.quantity, detail.price) |> Decimal.round(2)
-
-      allowance_amount =
-        Decimal.mult(base_amount, detail.discount) |> Decimal.div(100) |> Decimal.round(2)
+      line_total = ubl_line_total(detail)
+      allowance_amount = Decimal.sub(base_amount, line_total)
 
       """
         <cac:AllowanceCharge>

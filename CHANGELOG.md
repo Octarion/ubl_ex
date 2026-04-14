@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-04-14
+
+### Fixed
+- Line total rounding error when discounts produce half-penny values
+  - `ubl_line_total/1` now rounds only the final result (`qty × price × (1 − discount/100)`) instead of rounding the intermediate allowance
+  - `allowance_charge_xml/1` derives the allowance as `base_amount − line_total` to preserve the `BaseAmount = AllowanceAmount + LineExtensionAmount` invariant
+
 ## [0.8.2] - 2026-04-09
 
 ### Added
