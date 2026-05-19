@@ -1,7 +1,7 @@
 defmodule UblEx.MixProject do
   use Mix.Project
 
-  @version "0.8.3"
+  @version "0.8.4"
   @source_url "https://github.com/Octarion/ubl_ex"
 
   def project do
@@ -28,7 +28,7 @@ defmodule UblEx.MixProject do
   defp deps do
     [
       {:saxy, "~> 1.6"},
-      {:decimal, "~> 2.0"},
+      {:decimal, "~> 2.0 or ~> 3.0"},
       {:phoenix_html, "~> 4.0"},
       {:req, "~> 0.5.0", optional: true},
       {:ex_doc, "~> 0.39", only: :dev, runtime: false},

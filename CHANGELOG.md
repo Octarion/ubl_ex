@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-05-19
+
+### Security
+- Bumped `decimal` requirement to `~> 2.0 or ~> 3.0` and updated the lock to `3.1.0` to address a CVE affecting `decimal` versions < 3.0
+
+### Changed
+- Updated transitive and dev dependencies: `credo` 1.7.18, `ex_doc` 0.40.2, `finch` 0.22.0, `jason` 1.4.5, `makeup_erlang` 1.1.0, `mint` 1.8.0, `telemetry` 1.4.2
+
 ## [0.8.3] - 2026-04-14
 
 ### Fixed
