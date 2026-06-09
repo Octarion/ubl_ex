@@ -1,7 +1,7 @@
 defmodule UblEx.MixProject do
   use Mix.Project
 
-  @version "0.8.4"
+  @version "0.8.5"
   @source_url "https://github.com/Octarion/ubl_ex"
 
   def project do
@@ -30,7 +30,7 @@ defmodule UblEx.MixProject do
       {:saxy, "~> 1.6"},
       {:decimal, "~> 2.0 or ~> 3.0"},
       {:phoenix_html, "~> 4.0"},
-      {:req, "~> 0.5.0", optional: true},
+      {:req, "~> 0.5.0 or ~> 0.6.0", optional: true},
       {:ex_doc, "~> 0.39", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]

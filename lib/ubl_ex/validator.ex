@@ -59,7 +59,7 @@ defmodule UblEx.Validator do
     unless Code.ensure_loaded?(Req) do
       raise """
       UblEx.Validator requires the :req dependency.
-      Add {:req, "~> 0.5.0"} to your mix.exs dependencies.
+      Add {:req, "~> 0.5.0 or ~> 0.6.0"} to your mix.exs dependencies.
       """
     end
 

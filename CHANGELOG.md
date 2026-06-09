@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-06-09
+
+### Changed
+- Widened the optional `req` requirement to `~> 0.5.0 or ~> 0.6.0` so consumers can use either line; the validator's single `Req.post` call is unaffected by req 0.6's breaking changes
+- Updated dependencies: `req` 0.6.1, `mint` 1.9.0 (HTTP/1.1 & HTTP/2 security hardening), `decimal` 3.1.1, `credo` 1.7.19, `ex_doc` 0.40.3
+
 ## [0.8.4] - 2026-05-19
 
 ### Security
