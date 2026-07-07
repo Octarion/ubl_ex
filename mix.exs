@@ -1,7 +1,7 @@
 defmodule UblEx.MixProject do
   use Mix.Project
 
-  @version "0.8.5"
+  @version "0.8.6"
   @source_url "https://github.com/Octarion/ubl_ex"
 
   def project do

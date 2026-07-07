@@ -126,7 +126,7 @@ defmodule UblEx.Generator.CreditNote do
             </cac:ClassifiedTaxCategory>
         </cac:Item>
         <cac:Price>
-            <cbc:PriceAmount currencyID="EUR">#{Helpers.format(detail.price)}</cbc:PriceAmount>
+            <cbc:PriceAmount currencyID="EUR">#{Helpers.format_price(detail.price)}</cbc:PriceAmount>
         </cac:Price>
     </cac:CreditNoteLine>\
     """

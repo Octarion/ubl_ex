@@ -408,6 +408,30 @@ defmodule UblEx.Generator.Helpers do
   end
 
   @doc """
+  Format a unit price, preserving more than two decimals.
+
+  Unit prices (BT-146) may carry more than two decimals per EN 16931. Rounding
+  the price to two decimals while the line net amount is computed from the full
+  price breaks PEPPOL-EN16931-R120 whenever the quantity is not 1. This keeps the
+  full precision (trimming only insignificant trailing zeros) and pads to a
+  minimum of two decimals.
+  """
+  def format_price(amt) do
+    amt
+    |> Decimal.normalize()
+    |> Decimal.to_string(:normal)
+    |> pad_min_two_decimals()
+  end
+
+  defp pad_min_two_decimals(str) do
+    case String.split(str, ".") do
+      [int_part] -> "#{int_part}.00"
+      [int_part, dec_part] when byte_size(dec_part) == 1 -> "#{int_part}.#{dec_part}0"
+      [_int_part, _dec_part] -> str
+    end
+  end
+
+  @doc """
   Escape XML special characters.
   """
   def escape(str) when is_binary(str) do

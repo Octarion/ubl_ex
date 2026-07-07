@@ -47,4 +47,37 @@ defmodule UblEx.Generator.HelpersTest do
       assert Decimal.eq?(Decimal.add(line_total, allowance), base_amount)
     end
   end
+
+  describe "format_price/1" do
+    test "preserves more than two decimals for unit prices" do
+      assert Helpers.format_price(Decimal.new("0.2095")) == "0.2095"
+    end
+
+    test "pads to at least two decimals" do
+      assert Helpers.format_price(Decimal.new("5")) == "5.00"
+      assert Helpers.format_price(Decimal.new("5.1")) == "5.10"
+    end
+
+    test "trims insignificant trailing zeros from stored scale" do
+      assert Helpers.format_price(Decimal.new("0.20000000")) == "0.20"
+    end
+  end
+
+  describe "PEPPOL-EN16931-R120 line/price consistency" do
+    test "PriceAmount x quantity reconciles with LineExtensionAmount for >2-decimal price" do
+      detail = %{
+        quantity: Decimal.new("200"),
+        price: Decimal.new("0.2095"),
+        discount: Decimal.new("0"),
+        vat: Decimal.new("21")
+      }
+
+      line_total = Helpers.ubl_line_total(detail)
+      price_amount = Decimal.new(Helpers.format_price(detail.price))
+
+      reconciled = Decimal.mult(price_amount, detail.quantity) |> Decimal.round(2)
+
+      assert Decimal.eq?(reconciled, line_total)
+    end
+  end
 end

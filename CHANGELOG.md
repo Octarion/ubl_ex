@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-07-07
+
+### Security
+- Updated `mint` 1.9.1 (CVE-2026-56810: HTTP/1.1 chunked-response DoS) and `hpax` 1.0.4 (CVE-2026-58226: HPACK variable-length integer bignum DoS)
+
+### Changed
+- Updated dependencies: `req` 0.6.2 (relaxes finch requirement to `~> 0.21`), `finch` 0.23.0, `makeup` 1.2.2 (XSS fix in HTML formatter), `earmark_parser` 1.4.45
+
+### Fixed
+- PEPPOL-EN16931-R120 violation when a unit price carries more than two decimals and the quantity is not 1
+  - `Price/PriceAmount` was rounded to two decimals via `format/1` while `LineExtensionAmount` was computed from the full-precision price, so `PriceAmount × quantity` no longer reconciled with the line net amount (e.g. `0.2095 × 200` emitted `PriceAmount` `0.21` and `LineExtensionAmount` `41.90`, which a validator reads as `42.00`)
+  - Added `Helpers.format_price/1`, which preserves the full price precision (trimming only insignificant trailing zeros) and pads to a minimum of two decimals; both the invoice and credit-note generators now use it for `PriceAmount`
+
 ## [0.8.5] - 2026-06-09
 
 ### Changed
