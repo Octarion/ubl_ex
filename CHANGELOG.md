@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-07-30
+
+### Added
+- `usage-rules.md`, packaged with the hex release so consumers running `usage_rules.sync` (or any AI coding agent) get ubl_ex's conventions — return shapes, `Decimal` field requirements, tax-category defaults, and the optional `req` dependency for `UblEx.Validator`
+
+### Changed
+- Widened the optional `req` requirement to `~> 0.5.0 or ~> 0.6.0 or ~> 0.7.0` so consumers can use any of the three lines; the validator's single `Req.post` call (POST with a raw XML body) is unaffected by req 0.7's breaking changes (GET-with-body auto-upgraded to POST, `:auth` tuple form removed, adapter/decoder option reshuffling)
+- Updated dependencies: `req` 0.7.1, `mint` 1.9.3 (CVE-2026-59249: HTTP/1 chunk-size parsing rejected signed values, response-smuggling risk), `saxy` 1.6.1 (fixes UTF-8 characters split across chunks), `earmark_parser` 1.4.46
+
 ## [0.8.6] - 2026-07-07
 
 ### Security
