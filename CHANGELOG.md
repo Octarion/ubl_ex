@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.8] - 2026-09-08
+
+### Changed
+- Updated dependencies: `mint` 1.10.0 (CVE-2026-82728: unbounded HTTP/1 status-line/chunk-extension parsing enabled memory-exhaustion DoS; CVE-2026-82729: unbounded chunked chunk-size field enabled CPU-exhaustion DoS), `req` 0.7.4, `ex_doc` 0.40.4
+
 ## [0.8.7] - 2026-07-30
 
 ### Added
